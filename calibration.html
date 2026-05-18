@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calibration — Physics Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .split-left {
+    padding-top: 80px;
+    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Step pills — one per gesture */
+  .gesture-steps {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+  }
+  .gesture-step {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+    border: 1.5px solid #ccc;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .gesture-step.active {
+    border-color: #111;
+    color: #111;
+    font-weight: 600;
+  }
+  .gesture-step.done {
+    border-color: var(--pink);
+    color: var(--pink);
+  }
+
+  /* Big gesture name */
+  #gesture-name {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* Instruction text */
+  #cal-instruction {
+    font-size: 1.05rem;
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.6;
+    color: #555;
+  }
+
+  /* Detection indicator bar */
+  #detect-bar-wrap {
+    width: 220px;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #detect-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--pink);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+  }
+
+  /* Gravity label on right panel */
+  .gravity-label {
+    position: absolute;
+    top: 22px; right: 22px;
+  }
+</style>
+</head>
+<body>
+<a class="btn-back" href="gesture-guide.html"></a>
+<a class="btn-next" href="ready.html"></a>
+
+<div class="split">
+  <div class="page-overlay"></div>
+
+  <!-- Left: gesture calibration UI (no hand illustration) -->
+  <div class="split-left">
+
+    <!-- Step pills -->
+    <div class="gesture-steps" id="gesture-steps"></div>
+
+    <!-- Current gesture name -->
+    <div id="gesture-name">Pinch</div>
+
+    <!-- Instruction -->
+    <p id="cal-instruction">Perform the gesture in front of the camera</p>
+
+    <!-- Progress bar (fills as gesture is held) -->
+    <div id="detect-bar-wrap">
+      <div id="detect-bar"></div>
+    </div>
+
+  </div>
+
+  <div class="split-divider"></div>
+
+  <!-- Right: live particle response + slider -->
+  <div class="split-right">
+    <div class="label-box gravity-label" id="right-label">Distance</div>
+
+    <canvas id="pcal-canvas" width="340" height="320" style="margin-bottom:2rem;"></canvas>
+
+    <div class="slider-group" style="width:80%;max-width:320px;">
+      <div class="slider-row">
+        <div class="slider-limits"><span>0kg/s</span><span>30kg/s</span></div>
+        <input type="range" min="0" max="100" value="75" id="slider-cal">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+injectCameraBg();
+injectFlash();
+
+// ─── GESTURE SEQUENCE ─────────────────────────────────────────────────
+const gestures = [
+  {
+    name: 'Pinch',
+    instruction: 'Bring your thumb and index finger together',
+    rightLabel: 'Distance',
+    detect: detectPinch,
+  },
+  {
+    name: 'Shake Hand',
+    instruction: 'Shake your hand side to side quickly',
+    rightLabel: 'Temperature',
+    detect: detectShake,
+  },
+  {
+    name: 'Rotate',
+    instruction: 'Rotate your wrist in a circular motion',
+    rightLabel: 'Angle',
+    detect: detectRotate,
+  },
+];
+
+let currentIdx = 0;
+let holdProgress = 0;       // 0–100, fills progress bar
+let transitioning = false;  // lock out re-detection during transition
+
+// ─── STEP PILLS ───────────────────────────────────────────────────────
+function buildSteps() {
+  const container = document.getElementById('gesture-steps');
+  gestures.forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'gesture-step' + (i === 0 ? ' active' : '');
+    btn.textContent = g.name;
+    btn.onclick = () => jumpTo(i);
+    container.appendChild(btn);
+  });
+}
+buildSteps();
+
+function updateStepUI() {
+  document.querySelectorAll('.gesture-step').forEach((el, i) => {
+    el.classList.toggle('active', i === currentIdx);
+    el.classList.toggle('done', i < currentIdx);
+  });
+}
+
+function jumpTo(idx) {
+  if (transitioning) return;
+  currentIdx = idx;
+  holdProgress = 0;
+  transitioning = false;
+  prevLandmarks = null;
+  velocityHistory = [];
+  shakeXHistory = [];
+  rotationHistory = [];
+  updateStepUI();
+  updateGestureUI();
+}
+
+function updateGestureUI() {
+  const g = gestures[currentIdx];
+  document.getElementById('gesture-name').textContent = g.name;
+  document.getElementById('cal-instruction').textContent = g.instruction;
+  document.getElementById('right-label').textContent = g.rightLabel;
+  document.getElementById('detect-bar').style.width = '0%';
+}
+
+// ─── GESTURE DETECTORS ────────────────────────────────────────────────
+
+// Pinch: thumb tip (4) close to index tip (8)
+function detectPinch(landmarks) {
+  const thumb = landmarks[4], index = landmarks[8];
+  const dist = Math.sqrt((thumb.x - index.x)**2 + (thumb.y - index.y)**2);
+  const val = Math.max(0, Math.min(100, Math.round((0.15 - dist) / 0.15 * 100)));
+  document.getElementById('slider-cal').value = 100 - val;
+  return dist < 0.06; // clear pinch threshold
+}
+
+let prevLandmarks = null;
+let velocityHistory = [];
+
+// Shake: count left↔right direction reversals — far more reliable than avg velocity.
+let shakeXHistory = [];
+const SHAKE_WINDOW = 20;
+const SHAKE_MIN_MOVE = 0.012; // min normalised delta to register as a direction
+const SHAKE_REVERSALS_NEEDED = 3;
+
+function detectShake(landmarks) {
+  if (!prevLandmarks) { prevLandmarks = landmarks; return false; }
+
+  const dx = landmarks[0].x - prevLandmarks[0].x;
+  shakeXHistory.push(dx);
+  if (shakeXHistory.length > SHAKE_WINDOW) shakeXHistory.shift();
+
+  // Count how many times movement direction reverses
+  let reversals = 0, dir = 0;
+  for (const d of shakeXHistory) {
+    if (Math.abs(d) < SHAKE_MIN_MOVE) continue;
+    const newDir = d > 0 ? 1 : -1;
+    if (dir !== 0 && newDir !== dir) reversals++;
+    dir = newDir;
+  }
+
+  // Visual feedback: drive slider with peak speed in the window
+  const peakVx = Math.max(...shakeXHistory.map(Math.abs));
+  document.getElementById('slider-cal').value = Math.min(100, Math.round(peakVx * 1200));
+
+  prevLandmarks = landmarks;
+  return reversals >= SHAKE_REVERSALS_NEEDED;
+}
+
+let rotationHistory = [];
+
+// Rotate: wrist-to-middle-finger angle changes significantly
+function detectRotate(landmarks) {
+  const wrist = landmarks[0], mid = landmarks[12];
+  const angle = Math.atan2(mid.y - wrist.y, mid.x - wrist.x);
+  rotationHistory.push(angle);
+  if (rotationHistory.length > 20) rotationHistory.shift();
+
+  // Measure total angular change over the window
+  let totalChange = 0;
+  for (let i = 1; i < rotationHistory.length; i++) {
+    let diff = rotationHistory[i] - rotationHistory[i - 1];
+    // Wrap to [-π, π]
+    if (diff > Math.PI) diff -= 2 * Math.PI;
+    if (diff < -Math.PI) diff += 2 * Math.PI;
+    totalChange += Math.abs(diff);
+  }
+
+  const sliderVal = Math.min(100, Math.round((angle + Math.PI) / (2 * Math.PI) * 100));
+  document.getElementById('slider-cal').value = sliderVal;
+  return totalChange > 0.8; // ~45° cumulative rotation
+}
+
+// ─── PROGRESS & AUTO-ADVANCE ──────────────────────────────────────────
+const HOLD_FRAMES = 18; // ~0.6s at 30fps to confirm gesture
+
+function onGestureDetected(isDetected) {
+  if (transitioning) return;
+
+  const isShake = gestures[currentIdx].name === 'Shake Hand';
+
+  if (isDetected) {
+    holdProgress = Math.min(100, holdProgress + (100 / HOLD_FRAMES));
+  } else {
+    // For shake, don't decay — gaps between strokes are normal
+    if (!isShake) holdProgress = Math.max(0, holdProgress - 4);
+  }
+
+  document.getElementById('detect-bar').style.width = holdProgress + '%';
+
+  if (holdProgress >= 100) {
+    transitioning = true;
+    document.getElementById('cal-instruction').textContent = '✓ Got it!';
+    document.getElementById('detect-bar').style.background = '#22c55e';
+
+    setTimeout(() => {
+      if (currentIdx < gestures.length - 1) {
+        currentIdx++;
+        holdProgress = 0;
+        transitioning = false;
+        prevLandmarks = null;
+        velocityHistory = [];
+        shakeXHistory = [];
+        rotationHistory = [];
+        updateStepUI();
+        updateGestureUI();
+      } else {
+        location.href = 'ready.html';
+      }
+    }, 600);
+  }
+}
+
+// ─── PARTICLES ────────────────────────────────────────────────────────
+const pcalCanvas = document.getElementById('pcal-canvas');
+const pcalCtx = pcalCanvas.getContext('2d');
+let pcalParticles = [];
+
+(function initCalParticles() {
+  for (let i = 0; i < 28; i++) {
+    pcalParticles.push({
+      x: 80 + Math.random() * 180,
+      y: 60 + Math.random() * 200,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 5 + Math.random() * 4,
+    });
+  }
+})();
+
+function animCalParticles() {
+  pcalCtx.clearRect(0, 0, 340, 320);
+  const gravity = parseFloat(document.getElementById('slider-cal').value) / 100;
+  const cx = 170, cy = 160;
+  pcalParticles.forEach(p => {
+    const dx = cx - p.x, dy = cy - p.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) + 1;
+    p.vx += (dx / dist) * gravity * 0.4;
+    p.vy += (dy / dist) * gravity * 0.4;
+    p.vx *= 0.98; p.vy *= 0.98;
+    p.x += p.vx; p.y += p.vy;
+    pcalCtx.beginPath();
+    pcalCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    pcalCtx.fillStyle = '#111';
+    pcalCtx.fill();
+  });
+  requestAnimationFrame(animCalParticles);
+}
+animCalParticles();
+
+// ─── HAND TRACKING ────────────────────────────────────────────────────
+startCamera(function onResults(results) {
+  drawHandResults(results); // shared.js handles mirroring
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    onGestureDetected(false);
+    return;
+  }
+
+  // Use the first detected hand
+  const landmarks = results.multiHandLandmarks[0];
+  // Note: use raw (unmirrored) landmarks for gesture math — mirroring is visual only
+  const detected = gestures[currentIdx].detect(landmarks);
+  onGestureDetected(detected);
+});
+</script>
+</body>
+</html>

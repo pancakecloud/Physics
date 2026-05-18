@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gesture Guide — Physics Explorer</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  h1 {
+    font-size: clamp(2rem, 5.5vw, 4.2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 3rem;
+    text-align: center;
+    max-width: 90vw;
+  }
+  .gesture-icons {
+    display: flex;
+    gap: 5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .gesture-item {
+    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  }
+  .gesture-svg {
+    width: 90px;
+    height: 90px;
+    position: relative;
+  }
+  .gesture-svg img,
+  .gesture-svg svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .gesture-svg img {
+    object-fit: contain;
+  }
+  .gesture-svg svg {
+    display: none;
+  }
+  .gesture-svg.missing svg {
+    display: block;
+  }
+  .gesture-label { font-size: 1.2rem; font-weight: 500; font-style: italic; }
+  .gesture-note {
+    text-align: center;
+    max-width: 44rem;
+    margin: 0 auto 2rem;
+    color: #444;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+<a class="btn-back" href="pick-simulation.html"></a>
+<a class="btn-next" href="calibration.html"></a>
+
+<div class="page">
+  <div class="page-overlay"></div>
+  <h1>For this simulation you will need:</h1>
+  <div class="gesture-icons">
+    <div class="gesture-item">
+      <div class="gesture-svg">
+        <img src="illustrations/rotate-guide.png" alt="Rotate gesture"
+          onerror="this.style.display='none'; this.closest('.gesture-svg').classList.add('missing');"
+          onload="this.closest('.gesture-svg').classList.remove('missing');">
+        <svg viewBox="0 0 80 80" fill="none">
+          <path d="M40 20 C32 18 22 24 20 34 C18 44 24 54 34 58 C38 59 42 59 46 57" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M46 57 L50 50 L56 58" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M38 32 C35 30 32 32 33 36 L35 46 C35 49 38 50 40 48 L45 40 C47 37 45 33 42 33 Z" stroke="#111" stroke-width="1.5" fill="none"/>
+          <path d="M33 36 L31 28 C30 25 33 24 34 27" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M35 34 L33 26 C32 23 35 22 36 25" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M38 33 L37 24 C36 21 39 20 40 23" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M42 34 L42 26 C42 23 45 23 45 26" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M14 32 L10 30 M16 26 L13 22" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="gesture-label">Rotate</span>
+    </div>
+
+    <!-- Distance -->
+    <div class="gesture-item">
+      <div class="gesture-svg">
+        <img src="illustrations/distance-guide.png" alt="Distance gesture"
+          onerror="this.style.display='none'; this.closest('.gesture-svg').classList.add('missing');"
+          onload="this.closest('.gesture-svg').classList.remove('missing');">
+        <svg viewBox="0 0 80 80" fill="none">
+          <path d="M28 50 C26 48 25 44 27 40 L32 30 C33 27 36 27 36 30 L36 38" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M36 28 L36 22 C36 19 39 19 39 22 L39 36" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M39 26 L39 20 C39 17 42 17 42 20 L42 35" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M42 28 L42 22 C42 19 45 20 45 23 L45 36" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M28 50 L35 58 C38 62 44 60 44 56 L45 36" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M18 28 L18 20 M18 20 L15 24 M18 20 L21 24" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 52 L18 60 M18 60 L15 56 M18 60 L21 56" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="gesture-label">distance</span>
+    </div>
+
+    <!-- Shake hand -->
+    <div class="gesture-item">
+      <div class="gesture-svg">
+        <img src="illustrations/shake-hand-guide.png" alt="Shake hand gesture"
+          onerror="this.style.display='none'; this.closest('.gesture-svg').classList.add('missing');"
+          onload="this.closest('.gesture-svg').classList.remove('missing');">
+        <svg viewBox="0 0 80 80" fill="none">
+          <path d="M30 50 C26 46 24 40 26 34 L30 24 C31 21 34 22 34 25 L34 35" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M34 32 L34 22 C34 19 37 19 37 22 L37 35" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M37 30 L37 20 C37 17 40 17 40 20 L40 34" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M40 28 L40 22 C40 19 43 19 43 22 L43 34" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M30 50 L37 58 C40 62 46 60 46 56 L43 34" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M16 38 L12 36 M17 44 L12 44 M16 50 L12 52" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M52 34 L57 32 M52 40 L58 40 M52 46 L57 48" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="gesture-label">shake hand</span>
+    </div>
+
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>injectFlash();</script>
+</body>
+</html>

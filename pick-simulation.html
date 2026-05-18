@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick Simulation — Physics Explorer</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  h1 {
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 3rem;
+  }
+  .sim-cards {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sim-card {
+    display: flex; flex-direction: column; align-items: center; gap: 1rem;
+    cursor: pointer;
+  }
+  .sim-card-box {
+    width: clamp(200px, 22vw, 330px);
+    height: clamp(200px, 22vw, 330px);
+    background: #e8197d;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .sim-card:hover .sim-card-box {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(232,25,125,0.25);
+  }
+  .sim-card-label {
+    border: 1.5px solid var(--pink);
+    color: var(--pink);
+    padding: 8px 24px;
+    font-size: 0.95rem;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+  }
+  .sim-card:hover .sim-card-label { background: var(--pink); color: var(--white); }
+</style>
+</head>
+<body>
+<a class="btn-back" href="index.html"></a>
+<a class="btn-next" href="gesture-guide.html" onclick="setState({sim: getSim()})"></a>
+
+<div class="page">
+  <div class="page-overlay"></div>
+  <h1>Pick simulation.</h1>
+  <div class="sim-cards">
+    <div class="sim-card" onclick="pick('Celestial Bodies')">
+      <div class="sim-card-box"></div>
+      <div class="sim-card-label">Celestial Bodies</div>
+    </div>
+    <div class="sim-card" onclick="pick('Electricity')">
+      <div class="sim-card-box"></div>
+      <div class="sim-card-label">Electricity</div>
+    </div>
+    <div class="sim-card" onclick="pick('Waves')">
+      <div class="sim-card-box"></div>
+      <div class="sim-card-label">Waves</div>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+injectFlash();
+
+function pick(name) {
+  setState({ sim: name });
+  location.href = 'gesture-guide.html';
+}
+</script>
+</body>
+</html>

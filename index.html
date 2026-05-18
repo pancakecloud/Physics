@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics Explorer</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  h1 {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 3rem;
+    font-style: italic;
+  }
+  p {
+    font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+    line-height: 1.8;
+    text-align: center;
+    max-width: 680px;
+    color: #333;
+    margin-bottom: 3rem;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="page-overlay"></div>
+  <h1>Ready to explore?</h1>
+  <p>
+    Your relationship with knowledge begins with your body.<br>
+    This project transforms learning from passive consumption into physical exploration<br>
+    through gesture, movement, and play.<br>
+    Instead of navigating information through clicks, tabs, and rigid structures,<br>
+    you uncover ideas by interacting naturally with space itself.
+  </p>
+  <button class="btn-pink" onclick="location.href='pick-simulation.html'">Let's explore!</button>
+</div>
+
+<script src="shared.js"></script>
+<script>injectFlash();</script>
+</body>
+</html>

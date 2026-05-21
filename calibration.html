@@ -77,10 +77,13 @@
     transition: width 0.1s linear;
   }
 
-  /* Gravity label on right panel */
-  .gravity-label {
-    position: absolute;
-    top: 22px; right: 22px;
+  .calibration-note {
+    max-width: 360px;
+    text-align: center;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-top: 1.6rem;
   }
 </style>
 </head>
@@ -108,23 +111,9 @@
       <div id="detect-bar"></div>
     </div>
 
+    <p class="calibration-note">Use your left hand for pinch to generate gravity and choose where to form the celestial body, then use your right hand to shake and increase turbulence within the molecular cloud.</p>
   </div>
 
-  <div class="split-divider"></div>
-
-  <!-- Right: live particle response + slider -->
-  <div class="split-right">
-    <div class="label-box gravity-label" id="right-label">Distance</div>
-
-    <canvas id="pcal-canvas" width="340" height="320" style="margin-bottom:2rem;"></canvas>
-
-    <div class="slider-group" style="width:80%;max-width:320px;">
-      <div class="slider-row">
-        <div class="slider-limits"><span>0kg/s</span><span>30kg/s</span></div>
-        <input type="range" min="0" max="100" value="75" id="slider-cal">
-      </div>
-    </div>
-  </div>
 </div>
 
 <script src="shared.js"></script>
@@ -137,20 +126,12 @@ const gestures = [
   {
     name: 'Pinch',
     instruction: 'Bring your thumb and index finger together',
-    rightLabel: 'Distance',
     detect: detectPinch,
   },
   {
     name: 'Shake Hand',
     instruction: 'Shake your hand side to side quickly',
-    rightLabel: 'Temperature',
     detect: detectShake,
-  },
-  {
-    name: 'Rotate',
-    instruction: 'Rotate your wrist in a circular motion',
-    rightLabel: 'Angle',
-    detect: detectRotate,
   },
 ];
 
@@ -186,7 +167,6 @@ function jumpTo(idx) {
   prevLandmarks = null;
   velocityHistory = [];
   shakeXHistory = [];
-  rotationHistory = [];
   updateStepUI();
   updateGestureUI();
 }
@@ -195,7 +175,6 @@ function updateGestureUI() {
   const g = gestures[currentIdx];
   document.getElementById('gesture-name').textContent = g.name;
   document.getElementById('cal-instruction').textContent = g.instruction;
-  document.getElementById('right-label').textContent = g.rightLabel;
   document.getElementById('detect-bar').style.width = '0%';
 }
 
@@ -205,8 +184,6 @@ function updateGestureUI() {
 function detectPinch(landmarks) {
   const thumb = landmarks[4], index = landmarks[8];
   const dist = Math.sqrt((thumb.x - index.x)**2 + (thumb.y - index.y)**2);
-  const val = Math.max(0, Math.min(100, Math.round((0.15 - dist) / 0.15 * 100)));
-  document.getElementById('slider-cal').value = 100 - val;
   return dist < 0.06; // clear pinch threshold
 }
 
@@ -235,36 +212,8 @@ function detectShake(landmarks) {
     dir = newDir;
   }
 
-  // Visual feedback: drive slider with peak speed in the window
-  const peakVx = Math.max(...shakeXHistory.map(Math.abs));
-  document.getElementById('slider-cal').value = Math.min(100, Math.round(peakVx * 1200));
-
   prevLandmarks = landmarks;
   return reversals >= SHAKE_REVERSALS_NEEDED;
-}
-
-let rotationHistory = [];
-
-// Rotate: wrist-to-middle-finger angle changes significantly
-function detectRotate(landmarks) {
-  const wrist = landmarks[0], mid = landmarks[12];
-  const angle = Math.atan2(mid.y - wrist.y, mid.x - wrist.x);
-  rotationHistory.push(angle);
-  if (rotationHistory.length > 20) rotationHistory.shift();
-
-  // Measure total angular change over the window
-  let totalChange = 0;
-  for (let i = 1; i < rotationHistory.length; i++) {
-    let diff = rotationHistory[i] - rotationHistory[i - 1];
-    // Wrap to [-π, π]
-    if (diff > Math.PI) diff -= 2 * Math.PI;
-    if (diff < -Math.PI) diff += 2 * Math.PI;
-    totalChange += Math.abs(diff);
-  }
-
-  const sliderVal = Math.min(100, Math.round((angle + Math.PI) / (2 * Math.PI) * 100));
-  document.getElementById('slider-cal').value = sliderVal;
-  return totalChange > 0.8; // ~45° cumulative rotation
 }
 
 // ─── PROGRESS & AUTO-ADVANCE ──────────────────────────────────────────
@@ -297,7 +246,6 @@ function onGestureDetected(isDetected) {
         prevLandmarks = null;
         velocityHistory = [];
         shakeXHistory = [];
-        rotationHistory = [];
         updateStepUI();
         updateGestureUI();
       } else {
@@ -307,42 +255,7 @@ function onGestureDetected(isDetected) {
   }
 }
 
-// ─── PARTICLES ────────────────────────────────────────────────────────
-const pcalCanvas = document.getElementById('pcal-canvas');
-const pcalCtx = pcalCanvas.getContext('2d');
-let pcalParticles = [];
 
-(function initCalParticles() {
-  for (let i = 0; i < 28; i++) {
-    pcalParticles.push({
-      x: 80 + Math.random() * 180,
-      y: 60 + Math.random() * 200,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: 5 + Math.random() * 4,
-    });
-  }
-})();
-
-function animCalParticles() {
-  pcalCtx.clearRect(0, 0, 340, 320);
-  const gravity = parseFloat(document.getElementById('slider-cal').value) / 100;
-  const cx = 170, cy = 160;
-  pcalParticles.forEach(p => {
-    const dx = cx - p.x, dy = cy - p.y;
-    const dist = Math.sqrt(dx*dx + dy*dy) + 1;
-    p.vx += (dx / dist) * gravity * 0.4;
-    p.vy += (dy / dist) * gravity * 0.4;
-    p.vx *= 0.98; p.vy *= 0.98;
-    p.x += p.vx; p.y += p.vy;
-    pcalCtx.beginPath();
-    pcalCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    pcalCtx.fillStyle = '#111';
-    pcalCtx.fill();
-  });
-  requestAnimationFrame(animCalParticles);
-}
-animCalParticles();
 
 // ─── HAND TRACKING ────────────────────────────────────────────────────
 startCamera(function onResults(results) {

@@ -92,7 +92,7 @@ function drawHandResults(results) {
   // Mirror the raw video so it feels like a mirror to the user
   ctx.save();
   ctx.scale(-1, 1);
-  ctx.drawImage(results.image, -handCanvas.width, 0, handCanvas.width, handCanvas.height);
+  // ctx.drawImage(results.image, -handCanvas.width, 0, handCanvas.width, handCanvas.height);
   ctx.restore();
 
   if (!results.multiHandLandmarks) return;

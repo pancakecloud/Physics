@@ -44,6 +44,7 @@
     display: block;
   }
   .gesture-label { font-size: 1.2rem; font-weight: 500; font-style: italic; }
+  .gesture-subtitle { font-size: 0.95rem; color: #666; text-transform: uppercase; letter-spacing: 0.12em; }
   .gesture-note {
     text-align: center;
     max-width: 44rem;
@@ -54,33 +55,14 @@
 </style>
 </head>
 <body>
-<a class="btn-back" href="pick-simulation.html"></a>
+<a class="btn-back" href="index.html#pick"></a>
 <a class="btn-next" href="calibration.html"></a>
 
 <div class="page">
   <div class="page-overlay"></div>
   <h1>For this simulation you will need:</h1>
   <div class="gesture-icons">
-    <div class="gesture-item">
-      <div class="gesture-svg">
-        <img src="illustrations/rotate-guide.png" alt="Rotate gesture"
-          onerror="this.style.display='none'; this.closest('.gesture-svg').classList.add('missing');"
-          onload="this.closest('.gesture-svg').classList.remove('missing');">
-        <svg viewBox="0 0 80 80" fill="none">
-          <path d="M40 20 C32 18 22 24 20 34 C18 44 24 54 34 58 C38 59 42 59 46 57" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <path d="M46 57 L50 50 L56 58" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M38 32 C35 30 32 32 33 36 L35 46 C35 49 38 50 40 48 L45 40 C47 37 45 33 42 33 Z" stroke="#111" stroke-width="1.5" fill="none"/>
-          <path d="M33 36 L31 28 C30 25 33 24 34 27" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <path d="M35 34 L33 26 C32 23 35 22 36 25" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <path d="M38 33 L37 24 C36 21 39 20 40 23" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <path d="M42 34 L42 26 C42 23 45 23 45 26" stroke="#111" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <path d="M14 32 L10 30 M16 26 L13 22" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="gesture-label">Rotate</span>
-    </div>
-
-    <!-- Distance -->
+    <!-- Pinch -->
     <div class="gesture-item">
       <div class="gesture-svg">
         <img src="illustrations/distance-guide.png" alt="Distance gesture"
@@ -96,7 +78,8 @@
           <path d="M18 52 L18 60 M18 60 L15 56 M18 60 L21 56" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <span class="gesture-label">distance</span>
+      <span class="gesture-label">pinch</span>
+      <span class="gesture-subtitle">left hand</span>
     </div>
 
     <!-- Shake hand -->
@@ -116,6 +99,7 @@
         </svg>
       </div>
       <span class="gesture-label">shake hand</span>
+      <span class="gesture-subtitle">right hand</span>
     </div>
 
   </div>

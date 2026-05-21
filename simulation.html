@@ -3,127 +3,128 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simulation — Physics Explorer</title>
+<title>Celestial Bodies — Physics Explorer</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="styles.css">
 <style>
-  /* Layer 0: camera feed */
-  #cam-canvas {
-    position: fixed; inset: 0; width: 100%; height: 100%;
-    z-index: 0; opacity: 0.55;
-  }
-  /* Layer 1: particles (transparent bg) */
-  #sim-canvas {
-    position: fixed; inset: 0; width: 100%; height: 100%;
-    z-index: 1; pointer-events: none;
-  }
-  /* Layer 2: hand skeleton overlay */
-  #hand-overlay {
-    position: fixed; inset: 0; width: 100%; height: 100%;
-    z-index: 2; pointer-events: none;
-  }
-  /* Hidden video — MediaPipe source only */
-  #video-src { display: none; }
-  /* All UI floats on top */
-  .ui { position: fixed; z-index: 20; }
-  /* Top-left: sim name */
-  #sim-title { top: 22px; left: 80px; }
-  /* Top-center: guided prompt */
-  #sim-prompt {
-    top: 22px; left: 50%; transform: translateX(-50%);
-    border: 1.5px solid #111; padding: 12px 24px;
-    text-align: center; font-size: 0.95rem; max-width: 380px;
-    background: rgba(255,255,255,0.88); line-height: 1.5; white-space: normal;
-  }
-  /* Top-right: gesture legend */
-  #legend {
-    top: 16px; right: 22px;
-    display: flex; flex-direction: column; gap: 6px;
-    background: rgba(255,255,255,0.88); padding: 10px 12px;
-  }
-  .legend-row { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #222; }
-  .legend-row svg { flex-shrink: 0; }
-  /* Parameter panel — bottom-right */
-  #param-panel {
-    bottom: 20px; right: 22px; width: 210px;
-    background: rgba(255,255,255,0.88); padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .param-row { display: flex; flex-direction: column; gap: 3px; }
-  .param-name { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #888; }
-  .param-value { font-size: 12px; color: #222; letter-spacing: 0.03em; }
-  .param-bar-wrap { height: 2px; background: rgba(0,0,0,0.08); border-radius: 1px; overflow: hidden; }
-  .param-bar { height: 100%; background: rgba(0,0,0,0.35); border-radius: 1px; transition: width 0.1s linear; }
-  /* Formation label */
-  #formation-label {
-    position: fixed; pointer-events: none; text-align: center;
-    z-index: 15; transition: opacity 0.6s ease; opacity: 0;
-  }
-  #formation-symbol { font-size: 22px; color: rgba(255,255,255,0.80); display: block; line-height: 1; }
-  #formation-name {
-    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: rgba(255,255,255,0.55); margin-top: 4px; display: block; white-space: nowrap;
-  }
-  /* Stamps */
-  #stamps-layer { position: fixed; inset: 0; z-index: 14; pointer-events: none; }
-  .stamp { position: absolute; pointer-events: none; text-align: center; animation: stamp-in 1.2s ease forwards; }
-  @keyframes stamp-in {
-    0%   { opacity:0; transform:translate(-50%,-50%) scale(1.6); }
-    40%  { opacity:1; transform:translate(-50%,-50%) scale(0.92); }
-    60%  { transform:translate(-50%,-50%) scale(1.04); }
-    100% { opacity:1; transform:translate(-50%,-50%) scale(1); }
-  }
-  .stamp-symbol { font-size: 18px; color: rgba(255,255,255,0.50); display: block; line-height: 1; }
-  .stamp-name {
-    font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
-    color: rgba(255,255,255,0.30); margin-top: 4px; display: block; white-space: nowrap;
-  }
-  .stamp::before {
-    content: ''; position: absolute; top: 50%; left: 50%;
-    width: 3px; height: 3px; border-radius: 50%;
-    background: rgba(255,255,255,0.20); transform: translate(-50%,-50%);
-  }
-  /* Buttons */
-  #btn-explore { bottom: 30px; left: 30px; }
-  #btn-save    { bottom: 30px; left: 30px; display: none; }
-  /* Hand guides */
-  .hand-guide { bottom: 60px; opacity: 0.12; pointer-events: none; }
-  #guide-left  { left: 60px; }
-  #guide-right { right: 60px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #000; overflow: hidden; }
+
+#sim-canvas, #hand-overlay {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+}
+#sim-canvas   { z-index: 1; }
+#hand-overlay { z-index: 2; pointer-events: none; }
+#video-src    { display: none; }
+
+.ui { position: fixed; z-index: 20; font-family: 'Space Grotesk', sans-serif; }
+
+/* ── TOP LEFT: sim name ── */
+#sim-title { top: 22px; left: 80px; }
+
+/* ── TOP CENTRE: phase prompt ── */
+#sim-prompt {
+  top: 22px; left: 50%; transform: translateX(-50%);
+  border: 1.5px solid #e8197d;
+  padding: 10px 22px;
+  text-align: center; font-size: 0.88rem; max-width: 400px;
+  background: rgba(255,255,255,0.90); line-height: 1.5; white-space: normal;
+  color: #111;
+}
+
+/* ── TOP RIGHT: gesture legend ── */
+#legend {
+  top: 16px; right: 22px;
+  display: flex; flex-direction: column; gap: 6px;
+  background: rgba(255,255,255,0.90); padding: 10px 14px;
+}
+.legend-row { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #222; }
+.legend-row svg { flex-shrink: 0; }
+
+/* ── BOTTOM RIGHT: parameter panel ── */
+#param-panel {
+  bottom: 60px; right: 22px; width: 220px;
+  background: rgba(255,255,255,0.90); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.param-row { display: flex; flex-direction: column; gap: 3px; }
+.param-name { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #888; }
+.param-value { font-size: 12px; color: #222; letter-spacing: 0.03em; }
+.param-bar-wrap { height: 2px; background: rgba(0,0,0,0.08); border-radius: 1px; overflow: hidden; }
+.param-bar { height: 100%; background: rgba(0,0,0,0.35); border-radius: 1px; transition: width 0.1s linear; }
+
+/* ── BOTTOM LEFT: reset + explore buttons ── */
+#btn-reset { top: 160px; right: 22px; }
+#btn-explore { bottom: 28px; left: 80px; }
+
+/* ── BOTTOM CENTRE: clock ── */
+#clock {
+  bottom: 28px; left: 50%; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+}
+.clock-val  { font-size: 1.3rem; font-weight: 300; color: rgba(255,255,255,0.6); letter-spacing: 0.05em; }
+.clock-unit { font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.2); margin-top: 1px; }
+
+/* ── CENTRE: announcement ── */
+#ann {
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; pointer-events: none;
+  opacity: 0; transition: opacity 0.7s;
+}
+#ann.show { opacity: 1; }
+.ann-sym  { display: none; }
+.ann-name { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.38); margin-top: 6px; display: block; }
+.ann-sub  { font-size: 9px; letter-spacing: 0.1em; color: rgba(232,25,125,0.55); margin-top: 3px; display: block; }
+
+/* ── STAMPS ── */
+#stamps-layer { position: fixed; inset: 0; z-index: 14; pointer-events: none; }
+.stamp { position: absolute; pointer-events: none; text-align: center; animation: stamp-in 1.2s ease forwards; }
+@keyframes stamp-in {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(1.6); }
+  40%  { opacity:1; transform:translate(-50%,-50%) scale(0.92); }
+  60%  { transform:translate(-50%,-50%) scale(1.04); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+}
+.stamp-symbol { font-size: 18px; color: rgba(255,255,255,0.50); display: block; line-height: 1; }
+.stamp-name {
+  font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: rgba(255,255,255,0.30); margin-top: 4px; display: block; white-space: nowrap;
+}
+
+/* ── HAND GUIDES ── */
+.hand-guide { bottom: 60px; opacity: 0.10; pointer-events: none; }
+#guide-left  { left: 24px; }
+#guide-right { right: 24px; }
+
+/* ── BACK BUTTON ── */
+.btn-back {
+  top: 20px; left: 20px;
+  border-color: rgba(0,0,0,0.2); color: rgba(0,0,0,0.5);
+}
+.btn-back:hover { background: rgba(0,0,0,0.06); color: #000; }
+.btn-back::before { content: '←'; font-size: 1.1rem; }
 </style>
 </head>
-<body style="background:#000;">
-
-<canvas id="cam-canvas"></canvas>
-<video id="video-src" autoplay muted playsinline></video>
+<body>
 <canvas id="sim-canvas"></canvas>
 <canvas id="hand-overlay"></canvas>
+<video id="video-src" autoplay muted playsinline></video>
 
 <div id="stamps-layer"></div>
-<div id="formation-label">
-  <span id="formation-symbol">☀</span>
-  <span id="formation-name">Star</span>
-</div>
 
-<a class="btn-back" href="pick-simulation.html" style="z-index:30;"></a>
+<a class="btn-back ui" href="index.html#pick"></a>
 
-<div class="ui label-box" id="sim-title" style="background:rgba(255,255,255,0.88);">Celestial Bodies</div>
-<div class="ui" id="sim-prompt"></div>
+<div class="ui label-box" id="sim-title" style="background:rgba(255,255,255,0.90);">Celestial Bodies</div>
 
+<div class="ui" id="sim-prompt">Pinch your left hand to gather particles and form a star. Right hand shakes for turbulence.</div>
+
+<!-- Gesture legend — top right -->
 <div class="ui" id="legend">
   <div class="legend-row">
     <svg width="32" height="32" viewBox="0 0 40 40">
       <path d="M20 34 C12 30 8 22 8 16 C8 10 14 8 20 8 C26 8 32 10 32 16 C32 22 28 30 20 34Z" stroke="#333" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>
     </svg>
-    Left pinch → Gravity
-  </div>
-  <div class="legend-row">
-    <svg width="32" height="32" viewBox="0 0 40 40">
-      <path d="M20 6 C12 6 6 12 6 20 C6 28 12 34 20 34" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-      <path d="M28 26 L32 30 L28 34" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    Right tilt → Rotation
+    Left pinch → Gravity &amp; mass
   </div>
   <div class="legend-row">
     <svg width="32" height="32" viewBox="0 0 40 40">
@@ -135,560 +136,1214 @@
   <div class="legend-row">
     <svg width="32" height="32" viewBox="0 0 40 40">
       <circle cx="20" cy="20" r="10" stroke="#333" stroke-width="1.2" fill="none"/>
+      <circle cx="20" cy="20" r="3" fill="#333"/>
       <path d="M20 10 L20 6 M20 30 L20 34 M10 20 L6 20 M30 20 L34 20" stroke="#333" stroke-width="1" stroke-linecap="round"/>
     </svg>
-    Left pos → Mass location
+    Pinch in disk → Planet
   </div>
 </div>
 
+<!-- Parameter panel — bottom right -->
 <div class="ui" id="param-panel">
   <div class="param-row">
-    <div class="param-name">Gravity · Collapse</div>
-    <div class="param-value" id="val-collapse">0%</div>
-    <div class="param-bar-wrap"><div class="param-bar" id="bar-collapse" style="width:0%"></div></div>
+    <div class="param-name">Pinch = Gravity</div>
+    <div class="param-value" id="val-pinch">0%</div>
+    <div class="param-bar-wrap"><div class="param-bar" id="bar-pinch" style="width:0%"></div></div>
   </div>
   <div class="param-row">
-    <div class="param-name">Angular Momentum · Rotation</div>
-    <div class="param-value" id="val-angular">0%</div>
-    <div class="param-bar-wrap"><div class="param-bar" id="bar-angular" style="width:0%"></div></div>
-  </div>
-  <div class="param-row">
-    <div class="param-name">Kinetic Energy · Turbulence</div>
+    <div class="param-name">Turbulence · Star count</div>
     <div class="param-value" id="val-turb">0%</div>
     <div class="param-bar-wrap"><div class="param-bar" id="bar-turb" style="width:0%"></div></div>
   </div>
   <div class="param-row">
-    <div class="param-name">Mass Density</div>
-    <div class="param-value" id="val-mass">1.00 M☉</div>
-    <div class="param-bar-wrap"><div class="param-bar" id="bar-mass" style="width:50%"></div></div>
+    <div class="param-name">Mass</div>
+    <div class="param-value" id="val-mass">—</div>
+    <div class="param-bar-wrap"><div class="param-bar" id="bar-mass" style="width:0%"></div></div>
+  </div>
+  <div class="param-row">
+    <div class="param-name">Systems · Planets</div>
+    <div class="param-value" id="val-systems">0 · 0</div>
+  </div>
+  <div class="param-row">
+    <div class="param-name">Free Particles</div>
+    <div class="param-value" id="val-free">600</div>
   </div>
 </div>
 
-<button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()">I want to explore!</button>
-<button class="btn-pink ui" id="btn-save" onclick="saveExperiment()">Save experiment!</button>
+<!-- Buttons -->
+<button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()" style="display:none;">Start exploring!</button>
+<button class="btn-pink ui" id="btn-reset" onclick="resetSim()">Reset</button>
 
+<!-- Clock -->
+<div class="ui" id="clock">
+  <div class="clock-val"  id="clock-val">—</div>
+  <div class="clock-unit" id="clock-unit">Cosmic Time</div>
+</div>
+
+<div class="ui" style="bottom:8px; right:8px; font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.18); pointer-events:none;">
+  Sizes &amp; distances not to scale
+</div>
+
+<!-- Announcement -->
+<div class="ui" id="ann">
+  <span class="ann-sym"  id="ann-sym">·</span>
+  <span class="ann-name" id="ann-name"></span>
+  <span class="ann-sub"  id="ann-sub"></span>
+</div>
+
+<!-- Hand guides -->
 <div class="ui hand-guide" id="guide-left">
-  <svg width="120" height="150" viewBox="0 0 140 170" fill="none">
+  <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
     <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
       stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
-    <circle cx="33" cy="50" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="45" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="55" cy="30" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="65" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="72" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="84" cy="50" r="5" stroke="white" stroke-width="1.5" fill="none"/>
   </svg>
 </div>
 <div class="ui hand-guide" id="guide-right">
-  <svg width="120" height="150" viewBox="0 0 140 170" fill="none">
+  <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
     <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
       stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
-    <circle cx="33" cy="50" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="45" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="55" cy="30" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="65" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="72" cy="34" r="5" stroke="white" stroke-width="1.5" fill="none"/>
-    <circle cx="84" cy="50" r="5" stroke="white" stroke-width="1.5" fill="none"/>
   </svg>
 </div>
 
 <script src="shared.js"></script>
 <script>
-injectFlash();
+'use strict';
 
-// ═══════════════════════════════════════════════════════════
-// PROMPT SYSTEM
-// ═══════════════════════════════════════════════════════════
-const sim = getSim();
-document.getElementById('sim-title').textContent = sim;
-
-const prompts = {
-  'Celestial Bodies': [
-    'Pinch your left hand to increase gravity and collapse matter.',
-    'Tilt your right hand to set the angular momentum — create rotation.',
-    'Shake your right hand vigorously to inject turbulence.',
-    'Move your left hand to shift the mass location.',
-  ],
-  'Electricity': [
-    'Point your index finger to draw a current path.',
-    'Shake your hand to generate a charge burst.',
-    'Pinch both hands to close the circuit.',
-    'Rotate your wrist to spin the magnetic field.',
-  ],
-  'Waves': [
-    'Move your hand up and down to create a wave.',
-    'Change distance between hands to adjust frequency.',
-    'Shake both hands for a standing wave interference.',
-    'Rotate slowly to shift the phase of the wave.',
-  ],
-};
-
-let promptIdx = 0, promptTimer = null, freeplay = false;
-
-function showPrompt() {
-  const box = document.getElementById('sim-prompt');
-  const btnExplore = document.getElementById('btn-explore');
-  const btnSave    = document.getElementById('btn-save');
-  if (freeplay) {
-    box.style.display        = 'none';
-    btnExplore.style.display = 'none';
-    btnSave.style.display    = 'block';
-    return;
-  }
-  const list = prompts[sim] || prompts['Celestial Bodies'];
-  box.textContent = list[promptIdx % list.length];
-  btnExplore.style.display = 'block';
-  btnSave.style.display    = 'none';
-  clearTimeout(promptTimer);
-  promptTimer = setTimeout(() => { promptIdx++; showPrompt(); }, 6000);
-}
-function enterFreeplay() { freeplay = true; showPrompt(); }
-function saveExperiment() { flash('Experiment saved!'); }
-showPrompt();
-
-// ═══════════════════════════════════════════════════════════
-// CANVAS SETUP
-// ═══════════════════════════════════════════════════════════
-const camCanvas     = document.getElementById('cam-canvas');
-const camCtx        = camCanvas.getContext('2d');
-const simCanvas     = document.getElementById('sim-canvas');
-const ctx           = simCanvas.getContext('2d');
-const handOverlay   = document.getElementById('hand-overlay');
-const handCtx       = handOverlay.getContext('2d');
-const video         = document.getElementById('video-src');
+// ─── CANVAS ──────────────────────────────────────────────
+const simCanvas   = document.getElementById('sim-canvas');
+const ctx         = simCanvas.getContext('2d');
+const handOverlay = document.getElementById('hand-overlay');
+const handCtx     = handOverlay.getContext('2d');
+const video       = document.getElementById('video-src');
 
 function resize() {
-  camCanvas.width   = simCanvas.width   = handOverlay.width  = window.innerWidth;
-  camCanvas.height  = simCanvas.height  = handOverlay.height = window.innerHeight;
+  simCanvas.width = handOverlay.width = window.innerWidth;
+  simCanvas.height = handOverlay.height = window.innerHeight;
 }
 resize();
 window.addEventListener('resize', () => { resize(); initParticles(); });
 
-// ═══════════════════════════════════════════════════════════
-// SIMULATION PARAMETERS
-// ═══════════════════════════════════════════════════════════
-const params = {
-  collapseStrength: 0.0,
-  angularMomentum:  0.0,
-  turbulence:       0.0,
-  massX:            0.5,
-  massY:            0.5,
-  massAmount:       1.0,
-};
-function smooth(c, t, k) { return c + (t - c) * k; }
+// ─── CLOCK ───────────────────────────────────────────────
+let cosmicMyr = 0, lastTs = null, clockOn = false;
 
-// ═══════════════════════════════════════════════════════════
-// PARTICLES
-// ═══════════════════════════════════════════════════════════
-const NUM = 1200;
+// ─── PERLIN NOISE ────────────────────────────────────────
+const _P = new Uint8Array(512);
+for (let i=0;i<256;i++) _P[i]=i;
+for (let i=255;i>0;i--){const j=(Math.random()*(i+1))|0;[_P[i],_P[j]]=[_P[j],_P[i]];}
+for (let i=0;i<256;i++) _P[i+256]=_P[i];
+const _fd=t=>t*t*t*(t*(t*6-15)+10);
+const _lp=(a,b,t)=>a+t*(b-a);
+const _g2=(h,x,y)=>{const u=h<2?x:y,v=h<2?y:x;return(h&1?-u:u)+(h&2?-v:v);};
+function noise2(x,y){
+  const xi=Math.floor(x)&255,yi=Math.floor(y)&255;
+  const xf=x-Math.floor(x),yf=y-Math.floor(y);
+  const u=_fd(xf),v=_fd(yf);
+  return _lp(_lp(_g2(_P[_P[xi]+yi],xf,yf),_g2(_P[_P[xi+1]+yi],xf-1,yf),u),
+             _lp(_g2(_P[_P[xi]+yi+1],xf,yf-1),_g2(_P[_P[xi+1]+yi+1],xf-1,yf-1),u),v);
+}
+let noiseT = 0;
+
+// ─── PARTICLES ───────────────────────────────────────────
+const N_PARTICLES = 600;
 let particles = [];
 
 function initParticles() {
   particles = [];
-  const cx = simCanvas.width / 2, cy = simCanvas.height / 2;
-  const spread = Math.min(simCanvas.width, simCanvas.height) * 0.40;
-  for (let i = 0; i < NUM; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.pow(Math.random(), 0.5) * spread;
+  const W = simCanvas.width, H = simCanvas.height;
+  for (let i = 0; i < N_PARTICLES; i++) {
     particles.push({
-      x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r,
-      vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+      x: Math.random()*W, y: Math.random()*H,
+      vx: (Math.random()-0.5)*0.15,
+      vy: (Math.random()-0.5)*0.15,
+      type: Math.random()<0.75?'H':'He',
+      free: true, selected: false, consumed: false,
+      collapsing: false,
+      collapseAngle: 0, collapseR: 0,
+      collapseCx: 0, collapseCy: 0,
+      sysIdx: -1,
+      inDisk: false,
+      diskR: 0, diskAngle: 0, diskSpeed: 0, diskZone: 0,
     });
   }
-  ignitionLevel    = 0;
-  currentFormation = null;
-  formationAge     = 0;
-  clumpX = simCanvas.width  / 2;
-  clumpY = simCanvas.height / 2;
-  clearStamps();
-  ctx.clearRect(0, 0, simCanvas.width, simCanvas.height);
 }
 
-// ═══════════════════════════════════════════════════════════
-// PERLIN NOISE 2D
-// ═══════════════════════════════════════════════════════════
-const P = new Uint8Array(512);
-for (let i = 0; i < 256; i++) P[i] = i;
-for (let i = 255; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [P[i], P[j]] = [P[j], P[i]]; }
-for (let i = 0; i < 256; i++) P[i + 256] = P[i];
-const fade = t => t*t*t*(t*(t*6-15)+10);
-const lrp  = (a, b, t) => a + t * (b - a);
-const g2   = (h, x, y) => { const u = h < 2 ? x : y, v = h < 2 ? y : x; return (h&1 ? -u : u) + (h&2 ? -v : v); };
-function noise2(x, y) {
-  const xi = Math.floor(x)&255, yi = Math.floor(y)&255;
-  const xf = x - Math.floor(x),  yf = y - Math.floor(y);
-  const u = fade(xf), v = fade(yf);
-  return lrp(
-    lrp(g2(P[P[xi]+yi], xf, yf),     g2(P[P[xi+1]+yi], xf-1, yf),     u),
-    lrp(g2(P[P[xi]+yi+1], xf, yf-1), g2(P[P[xi+1]+yi+1], xf-1, yf-1), u), v);
+// ─── STATE MACHINE ───────────────────────────────────────
+const SIM = { IDLE:'IDLE', SELECTED:'SELECTED', COLLAPSING:'COLLAPSING', EXPLORING:'EXPLORING' };
+let simState = SIM.IDLE;
+
+// ─── STAR SYSTEMS ARRAY ──────────────────────────────────
+let starSystems = [];
+
+function classifyStar(mass) {
+  const life = Math.max(6, Math.round(200/Math.pow(Math.max(0.08,mass),2.8)));
+  if (mass<0.08) return {label:'Brown Dwarf', coreCol:[110,75,45],  glowCol:[130,85,50],  lifetime:Infinity, radius:4};
+  if (mass<0.5)  return {label:'Red Dwarf',   coreCol:[255,90,50],  glowCol:[220,60,30],  lifetime:life,     radius:5};
+  if (mass<2)    return {label:'Yellow Star', coreCol:[255,240,170],glowCol:[255,200,80],  lifetime:life,     radius:8};
+  if (mass<8)    return {label:'White Star',  coreCol:[240,245,255],glowCol:[200,220,255], lifetime:life,     radius:10};
+  if (mass<20)   return {label:'Blue Giant',  coreCol:[160,190,255],glowCol:[100,140,255], lifetime:life,     radius:14};
+  return              {label:'Hypergiant',   coreCol:[200,160,255],glowCol:[160,100,255], lifetime:life,     radius:18};
 }
 
-// ═══════════════════════════════════════════════════════════
-// FORMATION CLASSIFIER
-// ═══════════════════════════════════════════════════════════
-const FORMATIONS = [
-  { id:'black_hole',      name:'Black Hole',      symbol:'◉', test: p => p.collapseStrength > 0.82 && p.turbulence < 0.15 && Math.abs(p.angularMomentum) < 0.20 },
-  { id:'neutron_star',    name:'Neutron Star',    symbol:'✦', test: p => p.collapseStrength > 0.70 && p.turbulence < 0.30 && Math.abs(p.angularMomentum) < 0.35 },
-  { id:'star',            name:'Star',            symbol:'☀', test: p => p.collapseStrength > 0.55 && p.turbulence < 0.40 && Math.abs(p.angularMomentum) < 0.50 },
-  { id:'protostar',       name:'Protostar',       symbol:'✧', test: p => p.collapseStrength > 0.35 && p.turbulence < 0.45 },
-  { id:'spiral_galaxy',   name:'Spiral Galaxy',   symbol:'𝌀', test: p => Math.abs(p.angularMomentum) > 0.60 && p.collapseStrength > 0.30 && p.turbulence < 0.45 },
-  { id:'accretion_disc',  name:'Accretion Disc',  symbol:'⊙', test: p => Math.abs(p.angularMomentum) > 0.40 && p.collapseStrength > 0.20 },
-  { id:'nebula',          name:'Nebula',          symbol:'❋', test: p => p.turbulence > 0.55 && p.collapseStrength > 0.20 },
-  { id:'molecular_cloud', name:'Molecular Cloud', symbol:'∿', test: p => p.turbulence > 0.40 && p.collapseStrength < 0.30 },
-  { id:'planet',          name:'Planet',          symbol:'◯', test: p => p.collapseStrength > 0.15 && p.collapseStrength < 0.50 && p.turbulence < 0.25 && Math.abs(p.angularMomentum) < 0.30 },
-  { id:'dust_cloud',      name:'Dust Cloud',      symbol:'·', test: p => p.collapseStrength < 0.10 && p.turbulence < 0.15 },
+function turbToCount(turb) {
+  if (turb<0.20) return 1;
+  if (turb<0.50) return 2;
+  if (turb<0.75) return 3;
+  return Math.min(6, 3+Math.floor((turb-0.75)*12));
+}
+
+// ─── COLLAPSE STATE ──────────────────────────────────────
+const collapse = {
+  running: false, progress: 0, timer: 0, duration: 8,
+  cx:0, cy:0, mass:0, turbulence:0, starCount:1,
+  starParticles:[], diskParticles:[],
+};
+
+function beginCollapse(cx, cy, mass, turbulence, selected) {
+  const count    = turbToCount(turbulence);
+  const shuffled = [...selected].sort(()=>Math.random()-0.5);
+  const split    = Math.floor(shuffled.length * 0.32);
+  const starPts  = shuffled.slice(0, split);
+  const diskPts  = shuffled.slice(split);
+
+  for (const p of starPts) {
+    p.free=false; p.selected=false; p.collapsing=true;
+    p.collapseAngle = Math.atan2(p.y-cy, p.x-cx);
+    p.collapseR     = Math.hypot(p.x-cx, p.y-cy);
+    p.collapseCx=cx; p.collapseCy=cy;
+  }
+  for (const p of diskPts) { p.free=false; p.selected=false; }
+
+  collapse.running=true; collapse.progress=0; collapse.timer=0;
+  collapse.cx=cx; collapse.cy=cy; collapse.mass=mass;
+  collapse.turbulence=turbulence; collapse.starCount=count;
+  collapse.starParticles=starPts; collapse.diskParticles=diskPts;
+
+  simState=SIM.COLLAPSING; clockOn=true;
+  announce('∿','Molecular Cloud Collapsing',
+    `${mass.toFixed(1)} M☉ · ${count} star${count>1?'s':''}`);
+}
+
+function tickCollapse(dt) {
+  if (!collapse.running) return;
+  collapse.timer += dt;
+  collapse.progress = Math.min(1, collapse.timer/collapse.duration);
+  const prog = collapse.progress;
+
+  for (const p of collapse.starParticles) {
+    if (p.consumed) continue;
+    const r = (1-prog)*p.collapseR;
+    p.collapseAngle += 0.04 + collapse.turbulence*0.08;
+    p.x = p.collapseCx + Math.cos(p.collapseAngle)*r;
+    p.y = p.collapseCy + Math.sin(p.collapseAngle)*r;
+    if (r < 3) p.consumed = true;
+  }
+
+  if (prog > 0.45) {
+    const unassigned = collapse.diskParticles.filter(p=>!p.inDisk&&!p.consumed);
+    for (let i=0; i<unassigned.length; i++) {
+      const p    = unassigned[i];
+      const frac = i / Math.max(1, collapse.diskParticles.length-1);
+      const diskR= simCanvas.width * (0.07 + frac*0.19);
+      p.inDisk=true; p.free=false;
+      p.diskR=diskR;
+      p.diskAngle = Math.atan2(p.y-collapse.cy, p.x-collapse.cx);
+      p.diskSpeed = (0.007 + 0.011*(1-frac)) * (1+collapse.mass*0.015);
+      if (Math.random()<0.5) p.diskSpeed*=-1;
+      if (Math.random()<collapse.turbulence*0.25) p.diskSpeed*=-1;
+      p.diskZone = frac<0.38?0:frac<0.70?1:2;
+      p.sysIdx   = starSystems.length;
+    }
+  }
+  if (prog >= 1) finishCollapse();
+}
+
+function finishCollapse() {
+  collapse.running = false;
+  const count    = collapse.starCount;
+  const massEach = collapse.mass / count;
+  const totalM   = collapse.mass;
+
+  const stars = [];
+  const sep   = count===1 ? 0 : 28 + collapse.turbulence*22;
+  for (let i=0; i<count; i++) {
+    const angle = (i/count)*Math.PI*2;
+    const info  = classifyStar(massEach);
+    stars.push({
+      baryAngle:  angle, baryR: sep,
+      orbitSpeed: count===1 ? 0 : (0.008+Math.random()*0.004)*(count/2),
+      x: collapse.cx+Math.cos(angle)*sep,
+      y: collapse.cy+Math.sin(angle)*sep,
+      mass: massEach,
+      label:info.label, coreCol:info.coreCol, glowCol:info.glowCol,
+      radius:info.radius, lifetime:info.lifetime,
+      ageMyr:0, glow:0,
+    });
+  }
+
+  const AU = simCanvas.width * 0.008;
+  const rocheAU  = 0.1 * Math.pow(Math.max(0.1, totalM), 0.33);
+  const innerR   = Math.max(stars[0].radius * 3, rocheAU * AU);
+  const hillAU   = Math.min(20, 12 * Math.pow(Math.max(0.08, totalM), 0.4));
+  const outerR   = hillAU * AU;
+  const frostLineR = innerR + (outerR - innerR) * 0.38;
+  const hzInnerR   = innerR + (outerR - innerR) * 0.20;
+  const hzOuterR   = innerR + (outerR - innerR) * 0.35;
+  const maxPlanets = Math.round(Math.max(2, Math.min(20, 3 + totalM * 0.65)));
+
+  const sysIdx = starSystems.length;
+  const newSys = {
+    cx: collapse.cx, cy: collapse.cy,
+    stars, planets: [], baryAngle: 0,
+    disk: {
+      cx: collapse.cx, cy: collapse.cy,
+      innerR, outerR, frostLineR, hzInnerR, hzOuterR,
+      rocheR: innerR, maxPlanets, totalMass: totalM,
+    },
+  };
+  starSystems.push(newSys);
+  for (const p of collapse.diskParticles) {
+    if (p.inDisk) p.sysIdx = sysIdx;
+  }
+
+  simState = SIM.EXPLORING;
+  checkCapturedBinary();
+  truncateOverlappingDisks();
+
+  const label = stars[0].label + (count>1?` × ${count}`:'');
+  announce('☀', label, `${collapse.mass.toFixed(1)} M☉ · disk forming`);
+}
+
+// ─── CAPTURED BINARY DETECTION ───────────────────────────
+const pendingCaptures = [];
+
+function checkCapturedBinary() {
+  const newest = starSystems[starSystems.length - 1];
+  if (!newest) return;
+
+  for (let i = 0; i < starSystems.length - 1; i++) {
+    const existing = starSystems[i];
+    if (pendingCaptures.some(pc => pc.a === existing && pc.b === newest)) continue;
+
+    const sep = Math.hypot(newest.cx - existing.cx, newest.cy - existing.cy);
+    const captureR = (existing.disk.outerR + newest.disk.outerR) * 1.4;
+    if (sep > captureR) continue;
+
+    const mA = existing.disk.totalMass;
+    const mB = newest.disk.totalMass;
+
+    if (existing.stars.length >= 2) {
+      const massRatio = mB / mA;
+      if (massRatio < 0.3) {
+        const G_SIM = 400;
+        const orbitSpeed = Math.min(0.0008,
+          Math.sqrt(G_SIM * (mA + mB)) / Math.pow(Math.max(sep, 60), 1.5));
+        for (const star of newest.stars) {
+          star.baryAngle  = Math.atan2(star.y - existing.cy, star.x - existing.cx);
+          star.baryR      = Math.max(sep * 0.85, existing.disk.outerR * 0.9);
+          star.orbitSpeed = orbitSpeed;
+          star.captured   = true;
+          existing.stars.push(star);
+        }
+        existing.disk.totalMass += mB;
+        existing.disk.maxPlanets = Math.round(Math.max(2, Math.min(20, 3 + existing.disk.totalMass * 0.65)));
+        const bIdx = starSystems.indexOf(newest);
+        if (bIdx !== -1) starSystems.splice(bIdx, 1);
+        announce('⊛', 'Hierarchical Triple', `Light star orbits the binary pair from afar`);
+      } else {
+        pendingTriples.push({ sys:existing, intruder:newest, mA, mB, timer:0, ejectTime:4, announced:false });
+        announce('⚡', 'Unstable Triple System', `Three-body chaos — one star will be ejected`);
+      }
+      return;
+    }
+
+    pendingCaptures.push({
+      a: existing, b: newest, progress: 0, captureTime: 3.5,
+      startAxB: newest.cx, startAyB: newest.cy,
+      startAxA: existing.cx, startAyA: existing.cy,
+      mA, mB,
+    });
+    announce('⊕', 'Gravitational Capture',
+      `${mA.toFixed(1)} + ${mB.toFixed(1)} M☉ spiralling together`);
+  }
+}
+
+function tickCaptures(dt) {
+  for (let ci = pendingCaptures.length - 1; ci >= 0; ci--) {
+    const pc = pendingCaptures[ci];
+    pc.progress = Math.min(1, pc.progress + dt / pc.captureTime);
+    const t = pc.progress < 0.5
+      ? 2 * pc.progress * pc.progress
+      : 1 - Math.pow(-2 * pc.progress + 2, 2) / 2;
+
+    const totalM = pc.mA + pc.mB;
+    const bx = (pc.startAxA * pc.mA + pc.startAxB * pc.mB) / totalM;
+    const by = (pc.startAyA * pc.mA + pc.startAyB * pc.mB) / totalM;
+
+    pc.a.cx = pc.startAxA + (bx - pc.startAxA) * t;
+    pc.a.cy = pc.startAyA + (by - pc.startAyA) * t;
+    pc.a.disk.cx = pc.a.cx; pc.a.disk.cy = pc.a.cy;
+    pc.b.cx = pc.startAxB + (bx - pc.startAxB) * t;
+    pc.b.cy = pc.startAyB + (by - pc.startAyB) * t;
+    pc.b.disk.cx = pc.b.cx; pc.b.disk.cy = pc.b.cy;
+
+    for (const p of particles) {
+      if (p.inDisk && p.sysIdx === starSystems.indexOf(pc.b)) {
+        if (p.diskOrbit) p.consumed = Math.random() < t * 0.03;
+      }
+    }
+
+    if (pc.progress >= 1) {
+      const G_SIM = 400;
+      const sep   = Math.hypot(pc.a.cx - pc.b.cx, pc.a.cy - pc.b.cy) || 60;
+      const orbitSpeed = Math.min(0.003, Math.sqrt(G_SIM * totalM) / Math.pow(Math.max(sep, 40), 1.5));
+
+      pc.a.cx = bx; pc.a.cy = by;
+      pc.a.disk.cx = bx; pc.a.disk.cy = by;
+
+      for (const star of pc.a.stars) {
+        star.baryAngle  = Math.atan2(star.y - by, star.x - bx);
+        star.baryR      = Math.max(20, Math.hypot(star.x - bx, star.y - by));
+        star.orbitSpeed = orbitSpeed; star.captured = true;
+      }
+      for (const star of pc.b.stars) {
+        star.baryAngle  = Math.atan2(star.y - by, star.x - bx) + Math.PI;
+        star.baryR      = Math.max(20, Math.hypot(star.x - bx, star.y - by));
+        star.orbitSpeed = orbitSpeed; star.captured = true;
+        pc.a.stars.push(star);
+      }
+
+      pc.a.disk.totalMass  = totalM;
+      pc.a.disk.maxPlanets = Math.round(Math.max(2, Math.min(20, 3 + totalM * 0.65)));
+      const bIdx = starSystems.indexOf(pc.b);
+      if (bIdx !== -1) starSystems.splice(bIdx, 1);
+      pendingCaptures.splice(ci, 1);
+      truncateOverlappingDisks();
+      announce('⊕', 'Binary Formed', `${pc.mA.toFixed(1)} + ${pc.mB.toFixed(1)} M☉ now orbiting together`);
+    }
+  }
+}
+
+// ─── TRIPLE SYSTEM INSTABILITY ───────────────────────────
+const pendingTriples = [];
+
+function tickTriples(dt) {
+  for (let ti = pendingTriples.length - 1; ti >= 0; ti--) {
+    const pt = pendingTriples[ti];
+    pt.timer += dt;
+
+    if (pt.timer < pt.ejectTime) {
+      const chaos = Math.sin(pt.timer * 8) * 15 * (pt.timer / pt.ejectTime);
+      for (const star of pt.intruder.stars) {
+        star.x += Math.cos(pt.timer * 5) * chaos * dt;
+        star.y += Math.sin(pt.timer * 7) * chaos * dt;
+      }
+      if (!pt.announced && pt.timer > 1) {
+        pt.announced = true;
+        announce('⚡', 'Three-Body Chaos', 'Orbits destabilising…');
+      }
+      continue;
+    }
+
+    const allStars = [
+      ...pt.sys.stars.map(s => ({ star: s, sys: pt.sys })),
+      ...pt.intruder.stars.map(s => ({ star: s, sys: pt.intruder })),
+    ];
+    allStars.sort((a, b) => a.star.mass - b.star.mass);
+    const ejected = allStars[0];
+
+    const dx = ejected.star.x - pt.sys.cx;
+    const dy = ejected.star.y - pt.sys.cy;
+    const d  = Math.hypot(dx, dy) || 1;
+    ejected.star.ejectVx = (dx/d) * 3.5;
+    ejected.star.ejectVy = (dy/d) * 3.5;
+    ejected.star.ejecting = true;
+    ejected.star.ejectFade = 1;
+
+    for (const s of pt.intruder.stars) {
+      if (s === ejected.star) continue;
+      const G_SIM = 400;
+      const sep   = Math.hypot(pt.sys.cx - pt.intruder.cx, pt.sys.cy - pt.intruder.cy) || 60;
+      const orbitSpeed = Math.min(0.003,
+        Math.sqrt(G_SIM * (pt.mA + pt.mB)) / Math.pow(Math.max(sep, 40), 1.5));
+      s.baryAngle  = Math.atan2(s.y - pt.sys.cy, s.x - pt.sys.cx) + Math.PI;
+      s.baryR      = Math.max(25, Math.hypot(s.x - pt.sys.cx, s.y - pt.sys.cy));
+      s.orbitSpeed = orbitSpeed; s.captured = true;
+      pt.sys.stars.push(s);
+    }
+
+    setTimeout(() => { pt.sys.stars = pt.sys.stars.filter(s => s !== ejected.star); }, 2500);
+
+    pt.sys.disk.totalMass += pt.mB;
+    const bIdx = starSystems.indexOf(pt.intruder);
+    if (bIdx !== -1) starSystems.splice(bIdx, 1);
+    pendingTriples.splice(ti, 1);
+    announce('💫', 'Star Ejected!', `${ejected.star.label} flung out on escape trajectory`);
+  }
+}
+
+// ─── DISK TRUNCATION ─────────────────────────────────────
+function truncateOverlappingDisks() {
+  for (let i=0; i<starSystems.length; i++) {
+    for (let j=i+1; j<starSystems.length; j++) {
+      const a = starSystems[i], b = starSystems[j];
+      if (!a.disk || !b.disk) continue;
+      const sep = Math.hypot(a.cx-b.cx, a.cy-b.cy);
+      if (sep >= a.disk.outerR + b.disk.outerR) continue;
+      const mA = a.disk.totalMass, mB = b.disk.totalMass;
+      const fracA = mA / (mA + mB);
+      const maxA  = sep * fracA, maxB = sep * (1 - fracA);
+      if (a.disk.outerR > maxA) {
+        a.disk.outerR    = maxA * 0.92;
+        a.disk.frostLineR= Math.min(a.disk.frostLineR, a.disk.outerR*0.95);
+        a.disk.hzOuterR  = Math.min(a.disk.hzOuterR,   a.disk.outerR*0.9);
+      }
+      if (b.disk.outerR > maxB) {
+        b.disk.outerR    = maxB * 0.92;
+        b.disk.frostLineR= Math.min(b.disk.frostLineR, b.disk.outerR*0.95);
+        b.disk.hzOuterR  = Math.min(b.disk.hzOuterR,   b.disk.outerR*0.9);
+      }
+    }
+  }
+}
+
+// ─── STAR AGING + ORBITS ─────────────────────────────────
+function tickStars(dt) {
+  for (const sys of starSystems) {
+    if (sys.stars.length > 1) sys.baryAngle += sys.stars[0].orbitSpeed * dt * 60;
+
+    for (let i=0; i<sys.stars.length; i++) {
+      const star = sys.stars[i];
+      star.ageMyr += dt;
+      star.glow    = Math.min(1, star.ageMyr/5);
+
+      if (star.ejecting) {
+        star.x += star.ejectVx; star.y += star.ejectVy;
+        star.ejectFade = Math.max(0, (star.ejectFade||1) - dt * 0.4);
+        star.glow = star.ejectFade;
+        continue;
+      }
+
+      if (sys.stars.length > 1) {
+        if (star.captured) {
+          star.baryAngle += star.orbitSpeed * dt * 60;
+          star.x = sys.cx + Math.cos(star.baryAngle) * star.baryR;
+          star.y = sys.cy + Math.sin(star.baryAngle) * star.baryR;
+        } else {
+          const phaseOffset = (i/sys.stars.length)*Math.PI*2;
+          const angle = sys.baryAngle + phaseOffset;
+          star.x = sys.cx + Math.cos(angle)*star.baryR;
+          star.y = sys.cy + Math.sin(angle)*star.baryR;
+        }
+      }
+    }
+  }
+}
+
+// ─── PLANET ZONES ────────────────────────────────────────
+const ZONES = [
+  { name:'Rocky Planet',  colors:['#b87048','#c89060','#a06030','#d0a070'], rRange:[2,10]  },
+  { name:'Gas Giant',     colors:['#d4a060','#c09050','#e8c080','#b07840'], rRange:[8,22]  },
+  { name:'Ice Planet',    colors:['#80b0d8','#a0c8e8','#6090c0','#c0ddf8'], rRange:[5,16]  },
 ];
-function classifyFormation(p) { for (const f of FORMATIONS) { if (f.test(p)) return f; } return null; }
 
-// ═══════════════════════════════════════════════════════════
-// STAMPS
-// ═══════════════════════════════════════════════════════════
-const stampsLayer = document.getElementById('stamps-layer');
-const stamps = [];
-let lastStampedId = null;
-
-function addStamp(formation, x, y) {
-  for (const s of stamps) {
-    if (s.formationId === formation.id && Math.hypot(s.x - x, s.y - y) < 40) return;
-  }
-  const el = document.createElement('div');
-  el.className = 'stamp';
-  el.style.left = x + 'px'; el.style.top = y + 'px';
-  el.innerHTML = `<span class="stamp-symbol">${formation.symbol}</span><span class="stamp-name">${formation.name}</span>`;
-  stampsLayer.appendChild(el);
-  stamps.push({ el, x, y, formationId: formation.id });
+function zoneForRadius(r, disk) {
+  const gasStart = disk.frostLineR;
+  const iceStart = disk.innerR + (disk.outerR - disk.innerR) * 0.70;
+  if (r < gasStart) return 0;
+  if (r < iceStart) return 1;
+  return 2;
 }
-function clearStamps() { stamps.length = 0; stampsLayer.innerHTML = ''; lastStampedId = null; }
 
-// ═══════════════════════════════════════════════════════════
-// SIMULATION STATE
-// ═══════════════════════════════════════════════════════════
-let ignitionLevel = 0, noiseT = 0;
-let currentFormation = null, formationAge = 0;
-const FORMATION_CONFIRM = 40;
-let clumpX = 0, clumpY = 0;
+let planetTimer = 0;
 
-function computeClumpCentroid(attractorX, attractorY) {
-  const r = Math.min(simCanvas.width, simCanvas.height) * 0.18;
-  let sx = 0, sy = 0, count = 0;
+function tryMakePlanet(dt) {
+  if (simState !== SIM.EXPLORING) return;
+  if (!gest.active || gest.pinch < 0.20) { planetTimer=0; return; }
+
+  const hx = gest.x*simCanvas.width;
+  const hy = gest.y*simCanvas.height;
+
+  let targetSys=null;
+  for (const sys of starSystems) {
+    if (!sys.disk) continue;
+    const r=Math.hypot(hx-sys.disk.cx,hy-sys.disk.cy);
+    if (r>=sys.disk.innerR && r<=sys.disk.outerR){ targetSys=sys; break; }
+  }
+  if (!targetSys){ planetTimer=0; return; }
+
+  const disk = targetSys.disk;
+  const r    = Math.hypot(hx-disk.cx, hy-disk.cy);
+
+  const insideRoche  = r <= disk.rocheR;
+  const systemFull   = targetSys.planets.length >= disk.maxPlanets;
+  let tooClose = false, tooClosePlanet = null;
+  for (const pl of targetSys.planets) {
+    const separation = Math.abs(pl.orbitR - r);
+    const minSpacing = (pl.orbitR + r) / 2 * 0.08;
+    if (separation < minSpacing) { tooClose=true; tooClosePlanet=pl; break; }
+  }
+
+  planetTimer += dt;
+  if (planetTimer < 1.5) return;
+  planetTimer = 0;
+
+  const zIdx = zoneForRadius(r, disk);
+  const zone = ZONES[zIdx];
+  const G_SIM      = 400;
+  const orbitSpeed = Math.sqrt(G_SIM * disk.totalMass / Math.pow(Math.max(r,20), 3));
+  const looselyBound = r > disk.outerR * 0.80;
+  const [rMin,rMax] = zone.rRange;
+  const planetRadius = rMin + gest.pinch*(rMax-rMin);
+
+  let eaten=0;
   for (const p of particles) {
-    const dx = p.x - attractorX, dy = p.y - attractorY;
-    if (dx*dx + dy*dy < r*r) { sx += p.x; sy += p.y; count++; }
+    if (!p.inDisk||p.consumed||p.sysIdx!==starSystems.indexOf(targetSys)) continue;
+    if (Math.hypot(p.x-hx,p.y-hy)<70){ p.consumed=true; eaten++; }
+    if (eaten>=18) break;
   }
-  if (count > 10) {
-    clumpX += (sx / count - clumpX) * 0.12;
-    clumpY += (sy / count - clumpY) * 0.12;
+
+  const col = zone.colors[Math.floor(Math.random()*zone.colors.length)];
+
+  let fate = 'stable', fateMsg = '';
+  if (insideRoche)  { fate='shred'; fateMsg='Inside Roche limit — tidal forces will shred it'; }
+  else if (systemFull) { fate='eject'; fateMsg=`System holds max ${disk.maxPlanets} planets — gravitational chaos will eject it`; }
+  else if (tooClose)   { fate='eject'; fateMsg='Too close to neighbour — mutual gravity will destabilise both orbits'; }
+  else if (looselyBound) { fate='loose'; fateMsg='Loosely bound — may drift away over time'; }
+
+  const planet = {
+    orbitR:r, orbitAngle:Math.atan2(hy-disk.cy,hx-disk.cx),
+    orbitSpeed, x:hx, y:hy,
+    radius:planetRadius, type:zone.name, color:col,
+    ageMyr:0, looselyBound, fate, fateTimer:0, dying:false, opacity:1,
+  };
+  targetSys.planets.push(planet);
+
+  if (fate === 'stable') {
+    const inHZ = r>=disk.hzInnerR && r<=disk.hzOuterR;
+    announce('◯', zone.name, inHZ ? '🌱 In habitable zone!' : 'Stable orbit');
   } else {
-    clumpX += (attractorX - clumpX) * 0.06;
-    clumpY += (attractorY - clumpY) * 0.06;
+    showFateWarning(fateMsg, fate);
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// PHYSICS TICK
-// ═══════════════════════════════════════════════════════════
-function tick() {
-  noiseT += 0.004;
-  const mx = params.massX * simCanvas.width;
-  const my = params.massY * simCanvas.height;
-  const G     = 380 * params.collapseStrength * params.massAmount;
-  const EPS2  = 55;
-  const omega = params.angularMomentum * 4.2;
-  const turb  = params.turbulence * 3.5;
-  const damp  = 0.974;
+let fateWarnTimer = null;
+function showFateWarning(msg, fate) {
+  const sym   = fate==='shred' ? '💫' : fate==='eject' ? '⚡' : '⚠';
+  const title = fate==='shred' ? 'Planet Shredding' : fate==='eject' ? 'Orbital Instability' : 'Loosely Bound';
+  announce(sym, title, msg);
+  clearTimeout(annTimer);
+  annTimer = setTimeout(() => document.getElementById('ann').classList.remove('show'), 5000);
+}
+
+// ─── GESTURE STATE ───────────────────────────────────────
+const gest = { active:false, pinch:0, shake:0, handSize:0, isOpen:false, x:0.5, y:0.5 };
+
+function palmCatchR() { return 80 + gest.pinch * 180; }
+function palmToMass()  { return Math.max(0.05, Math.min(30, 0.05 + 30 * Math.pow(gest.pinch, 1.5))); }
+
+// ─── SELECTION ───────────────────────────────────────────
+let selCx=0, selCy=0;
+
+function doSelection() {
+  const hx=gest.x*simCanvas.width, hy=gest.y*simCanvas.height;
+  const cr=palmCatchR();
+  selCx=hx; selCy=hy;
+  const nearExisting = starSystems.some(sys =>
+    sys.disk && Math.hypot(hx-sys.disk.cx, hy-sys.disk.cy) < sys.disk.outerR * 1.1
+  );
+  for (const p of particles) {
+    if (!p.free || nearExisting) { p.selected=false; continue; }
+    p.selected = Math.hypot(p.x-hx,p.y-hy)<cr;
+  }
+}
+
+function clearSelection() { for (const p of particles) p.selected=false; }
+
+function resetSim() {
+  starSystems=[]; cosmicMyr=0; clockOn=false; simState=SIM.IDLE; pinchHold=0;
+  collapse.running=false;
+  document.getElementById('clock-val').textContent='—';
+  document.getElementById('clock-unit').textContent='Cosmic Time';
+  stamps.forEach(el=>el.remove()); stamps.length=0;
+  promptStep=0; promptLocked=false; freeplay=false;
+  document.getElementById('btn-explore').style.display='none';
+  
+  document.getElementById('sim-prompt').style.display='block';
+  initParticles();
+}
+
+// ─── PHYSICS ─────────────────────────────────────────────
+function physicsTick(dt) {
+  noiseT += 0.0018;
+  const turb = gest.shake;
 
   for (const p of particles) {
-    const dx = mx - p.x, dy = my - p.y;
-    const d2 = dx*dx + dy*dy + EPS2;
-    const d  = Math.sqrt(d2);
-    const f  = G / d2;
-    p.vx += (dx / d) * f;
-    p.vy += (dy / d) * f;
-    if (omega !== 0) {
-      p.vx += (-dy / d) * omega * f * 0.48;
-      p.vy += ( dx / d) * omega * f * 0.48;
-    }
-    if (turb > 0.01) {
-      const ang = noise2(p.x * 0.003 + noiseT, p.y * 0.003) * Math.PI * 4;
-      p.vx += Math.cos(ang) * turb * 0.09;
-      p.vy += Math.sin(ang) * turb * 0.09;
-    }
-    p.vx *= damp; p.vy *= damp;
-    p.x  += p.vx; p.y  += p.vy;
-    if (p.x < -60)                        p.x = simCanvas.width  + 60;
-    else if (p.x > simCanvas.width  + 60) p.x = -60;
-    if (p.y < -60)                        p.y = simCanvas.height + 60;
-    else if (p.y > simCanvas.height + 60) p.y = -60;
+    if (!p.free || p.consumed || p.selected) continue;
+    const ang = noise2(p.x*0.003+noiseT,p.y*0.003)*Math.PI*2.5;
+    p.vx += Math.cos(ang)*(0.006+turb*0.18);
+    p.vy += Math.sin(ang)*(0.006+turb*0.18);
+    p.vx *= 0.987; p.vy *= 0.987;
+    p.x  += p.vx;  p.y  += p.vy;
+    const W=simCanvas.width,H=simCanvas.height;
+    if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+    if(p.y<0)p.y=H;if(p.y>H)p.y=0;
   }
 
-  computeClumpCentroid(mx, my);
-  const isIgniting = ['star','neutron_star','black_hole'].includes(currentFormation?.id);
-  const ignitionTarget = isIgniting ? params.collapseStrength * params.massAmount : 0;
-  ignitionLevel = smooth(ignitionLevel, ignitionTarget * 0.9, 0.04);
-}
-
-// ═══════════════════════════════════════════════════════════
-// FORMATION LABEL
-// ═══════════════════════════════════════════════════════════
-const labelEl  = document.getElementById('formation-label');
-const symbolEl = document.getElementById('formation-symbol');
-const nameEl   = document.getElementById('formation-name');
-
-function updateFormationLabel() {
-  const detected = classifyFormation(params);
-  if (detected && detected.id === currentFormation?.id) { formationAge++; }
-  else { currentFormation = detected; formationAge = 0; }
-
-  if (currentFormation && formationAge >= FORMATION_CONFIRM) {
-    const lx = Math.max(80, Math.min(simCanvas.width  - 80, clumpX));
-    const ly = Math.max(60, Math.min(simCanvas.height - 60, clumpY));
-    symbolEl.textContent    = currentFormation.symbol;
-    nameEl.textContent      = currentFormation.name;
-    labelEl.style.left      = lx + 'px';
-    labelEl.style.top       = (ly + 52) + 'px';
-    labelEl.style.transform = 'translate(-50%, 0)';
-    labelEl.style.opacity   = '1';
-    if (currentFormation.id !== lastStampedId) {
-      addStamp(currentFormation, lx, ly);
-      lastStampedId = currentFormation.id;
+  if (gest.active && gest.pinch > 0.15 && simState===SIM.SELECTED) {
+    for (const p of particles) {
+      if (!p.selected) continue;
+      const dx=selCx-p.x, dy=selCy-p.y, d=Math.hypot(dx,dy)+1;
+      p.vx += (dx/d)*0.04; p.vy += (dy/d)*0.04;
+      if (turb>0.05) {
+        const ang=noise2(p.x*0.004+noiseT*1.3,p.y*0.004)*Math.PI*4;
+        p.vx += Math.cos(ang)*turb*0.22;
+        p.vy += Math.sin(ang)*turb*0.22;
+      }
+      p.vx *= 0.94; p.vy *= 0.94;
+      p.x  += p.vx; p.y  += p.vy;
     }
-  } else {
-    labelEl.style.opacity = '0';
-    if (!currentFormation) lastStampedId = null;
+  }
+
+  for (let si=0; si<starSystems.length; si++) {
+    const sys = starSystems[si];
+    if (!sys.disk) continue;
+    for (const p of particles) {
+      if (!p.inDisk || p.consumed || p.sysIdx!==si) continue;
+      p.diskAngle += p.diskSpeed;
+      p.x = sys.disk.cx + Math.cos(p.diskAngle)*p.diskR;
+      p.y = sys.disk.cy + Math.sin(p.diskAngle)*p.diskR;
+    }
+  }
+
+  for (const sys of starSystems) {
+    sys.planets = sys.planets.filter(pl => pl.opacity > 0.01);
+    for (const pl of sys.planets) {
+      pl.orbitAngle += pl.orbitSpeed;
+      pl.x = sys.disk.cx + Math.cos(pl.orbitAngle)*pl.orbitR;
+      pl.y = sys.disk.cy + Math.sin(pl.orbitAngle)*pl.orbitR;
+      pl.ageMyr += dt;
+
+      if (pl.fate !== 'stable' && pl.fate !== 'loose') {
+        pl.fateTimer += dt;
+        if (pl.fate === 'shred' && pl.fateTimer > 2) {
+          pl.orbitR   = Math.max(0, pl.orbitR - dt * 8);
+          pl.radius   = Math.max(0, pl.radius - dt * 4);
+          pl.opacity  = Math.max(0, pl.opacity - dt * 0.4);
+          pl.orbitSpeed *= 1.02;
+        }
+        if (pl.fate === 'eject' && pl.fateTimer > 3) {
+          pl.orbitR  += dt * 12;
+          pl.opacity  = Math.max(0, pl.opacity - dt * 0.3);
+        }
+      }
+    }
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// PARAMETER PANEL
-// ═══════════════════════════════════════════════════════════
-function updateParamPanel() {
-  const pct   = v => `${(v * 100).toFixed(0)}%`;
-  const amDir = params.angularMomentum > 0.02 ? '↻' : params.angularMomentum < -0.02 ? '↺' : '·';
-  document.getElementById('val-collapse').textContent = `${pct(params.collapseStrength)}  (G = ${(params.collapseStrength * params.massAmount).toFixed(2)})`;
-  document.getElementById('bar-collapse').style.width = pct(params.collapseStrength);
-  document.getElementById('val-angular').textContent  = `${pct(Math.abs(params.angularMomentum))}  ${amDir}`;
-  document.getElementById('bar-angular').style.width  = pct(Math.abs(params.angularMomentum));
-  document.getElementById('val-turb').textContent     = pct(params.turbulence);
-  document.getElementById('bar-turb').style.width     = pct(params.turbulence);
-  document.getElementById('val-mass').textContent     = `${params.massAmount.toFixed(2)} M☉`;
-  document.getElementById('bar-mass').style.width     = `${((params.massAmount - 0.4) / 1.2) * 100}%`;
-}
-
-// ═══════════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════════
-let camReady = false;
-
-function drawCamera() {
-  if (!camReady || video.readyState < 2) return;
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh) return;
-  const cw = camCanvas.width, ch = camCanvas.height;
-  const scale = Math.max(cw / vw, ch / vh);
-  const dw = vw * scale, dh = vh * scale;
-  const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
-  camCtx.save();
-  camCtx.translate(cw, 0);
-  camCtx.scale(-1, 1);
-  camCtx.drawImage(video, cw - dx - dw, dy, dw, dh);
-  camCtx.restore();
-}
-
-function drawParticles() {
+// ─── RENDER ──────────────────────────────────────────────
+function draw() {
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.fillRect(0, 0, simCanvas.width, simCanvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
   ctx.globalCompositeOperation = 'source-over';
 
-  const maxD = Math.min(simCanvas.width, simCanvas.height) * 0.44;
-
-  if (ignitionLevel > 0.04) {
-    const rad = 180 * ignitionLevel;
-    const grd = ctx.createRadialGradient(clumpX, clumpY, 0, clumpX, clumpY, rad);
-    grd.addColorStop(0,    `rgba(255,230,160,${0.70 * ignitionLevel})`);
-    grd.addColorStop(0.35, `rgba(240,190,100,${0.35 * ignitionLevel})`);
-    grd.addColorStop(1,    'rgba(220,170,80,0)');
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.arc(clumpX, clumpY, rad, 0, Math.PI * 2);
-    ctx.fill();
+  if (gest.active && (simState===SIM.IDLE||simState===SIM.SELECTED||simState===SIM.EXPLORING)) {
+    const hx=gest.x*simCanvas.width, hy=gest.y*simCanvas.height;
+    const cr=palmCatchR();
+    const pinchAlpha = 0.15 + gest.pinch * 0.5;
+    ctx.beginPath(); ctx.arc(hx,hy,cr,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(232,25,125,${pinchAlpha})`; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=`rgba(232,25,125,${gest.pinch * 0.06})`; ctx.fill();
   }
 
-  const cs = params.collapseStrength;
-  for (const p of particles) {
-    const dx = p.x - clumpX, dy = p.y - clumpY;
-    const close = Math.max(0, 1 - Math.sqrt(dx*dx + dy*dy) / maxD);
-    let r, g, b;
-    if (ignitionLevel > 0.08 && close > 0.45) {
-      const t = Math.pow((close - 0.45) / 0.55, 1.3) * ignitionLevel;
-      r = Math.round(200 + (255 - 200) * t);
-      g = Math.round(200 + (220 - 200) * t);
-      b = Math.round(200 + (130 - 200) * t);
-    } else {
-      const bri = Math.round(200 + 55 * close * cs + 30 * close);
-      r = g = b = Math.min(255, bri);
+  // Disk zone indicator — pulse when left hand is inside a disk
+  if (simState===SIM.EXPLORING && gest.active) {
+    const hx=gest.x*simCanvas.width, hy=gest.y*simCanvas.height;
+    for (const sys of starSystems) {
+      if (!sys.disk) continue;
+      const r=Math.hypot(hx-sys.disk.cx,hy-sys.disk.cy);
+      if (r>=sys.disk.innerR && r<=sys.disk.outerR) {
+        // Draw a small pulse at finger position inside disk
+        ctx.globalAlpha=0.3+Math.sin(Date.now()*0.005)*0.15;
+        ctx.beginPath(); ctx.arc(hx,hy,6,0,Math.PI*2);
+        ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=1; ctx.stroke();
+        ctx.globalAlpha=1;
+      }
     }
-    ctx.globalAlpha = 0.55 + close * 0.45;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 0.7 + close * 1.2, 0, Math.PI * 2);
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fill();
   }
-  ctx.globalAlpha = 1;
+
+  if (simState===SIM.EXPLORING && gest.pinch>0.20 && planetTimer>0) {
+    const hx=gest.x*simCanvas.width, hy=gest.y*simCanvas.height;
+    const progress = Math.min(1, planetTimer/1.5);
+    const [rMin,rMax] = [4, 22];
+    const previewR  = (rMin + gest.pinch*(rMax-rMin)) * (1 + progress*2);
+    const alpha     = 0.12 + progress*0.45;
+    let zCol = 'rgba(200,160,100,';
+    for (const sys of starSystems) {
+      if (!sys.disk) continue;
+      const r = Math.hypot(hx-sys.disk.cx, hy-sys.disk.cy);
+      if (r>=sys.disk.innerR && r<=sys.disk.outerR) {
+        const frac=(r-sys.disk.innerR)/(sys.disk.outerR-sys.disk.innerR);
+        if      (frac<0.38) zCol='rgba(255,160,60,';
+        else if (frac<0.70) zCol='rgba(210,180,100,';
+        else                zCol='rgba(120,180,240,';
+      }
+    }
+    const grd=ctx.createRadialGradient(hx,hy,0,hx,hy,previewR*3);
+    grd.addColorStop(0, zCol+alpha+')');
+    grd.addColorStop(0.4, zCol+(alpha*0.5)+')');
+    grd.addColorStop(1, zCol+'0)');
+    ctx.fillStyle=grd;
+    ctx.beginPath(); ctx.arc(hx,hy,previewR*3,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.3 + progress*0.4;
+    ctx.beginPath(); ctx.arc(hx,hy,previewR,0,Math.PI*2);
+    ctx.fillStyle=zCol+'1)'; ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  for (const p of particles) {
+    if (p.consumed) continue;
+    let r,g,b,alpha,size;
+    if (p.collapsing)     { r=245;g=240;b=230;alpha=0.85;size=1.8; }
+    else if (p.inDisk) {
+      if      (p.diskZone===0){r=235;g=155;b=80; alpha=0.5; size=1.6;}
+      else if (p.diskZone===1){r=210;g=180;b=110;alpha=0.42;size=1.5;}
+      else                    {r=130;g=175;b=225;alpha=0.45;size=1.5;}
+    } else if (p.selected) {
+      if(p.type==='H'){r=210;g=215;b=235;alpha=0.80;size=2.0;}
+      else            {r=250;g=205;b=90; alpha=0.80;size=2.0;}
+    } else {
+      if(p.type==='H'){r=160;g=165;b=180;alpha=0.30;size=1.3;}
+      else            {r=200;g=165;b=80; alpha=0.30;size=1.3;}
+    }
+    ctx.globalAlpha=alpha;
+    ctx.beginPath(); ctx.arc(p.x,p.y,size,0,Math.PI*2);
+    ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fill();
+  }
+
+  for (const sys of starSystems) {
+    if (sys.disk) {
+      const d = sys.disk;
+      const gasStart = d.frostLineR;
+      const iceStart = d.innerR + (d.outerR - d.innerR) * 0.70;
+
+      if (gasStart > d.innerR) {
+        const grd=ctx.createRadialGradient(d.cx,d.cy,d.innerR,d.cx,d.cy,gasStart);
+        grd.addColorStop(0,'rgba(255,140,40,0.10)'); grd.addColorStop(1,'rgba(255,100,20,0.03)');
+        ctx.fillStyle=grd; ctx.globalAlpha=1;
+        ctx.beginPath(); ctx.arc(d.cx,d.cy,gasStart,0,Math.PI*2);
+        ctx.arc(d.cx,d.cy,d.innerR,0,Math.PI*2,true); ctx.fill();
+      }
+      if (iceStart > gasStart) {
+        const grd=ctx.createRadialGradient(d.cx,d.cy,gasStart,d.cx,d.cy,iceStart);
+        grd.addColorStop(0,'rgba(200,170,100,0.07)'); grd.addColorStop(1,'rgba(160,150,120,0.02)');
+        ctx.fillStyle=grd;
+        ctx.beginPath(); ctx.arc(d.cx,d.cy,iceStart,0,Math.PI*2);
+        ctx.arc(d.cx,d.cy,gasStart,0,Math.PI*2,true); ctx.fill();
+      }
+      if (d.outerR > iceStart) {
+        const grd=ctx.createRadialGradient(d.cx,d.cy,iceStart,d.cx,d.cy,d.outerR);
+        grd.addColorStop(0,'rgba(100,150,220,0.06)'); grd.addColorStop(1,'rgba(80,120,200,0.01)');
+        ctx.fillStyle=grd;
+        ctx.beginPath(); ctx.arc(d.cx,d.cy,d.outerR,0,Math.PI*2);
+        ctx.arc(d.cx,d.cy,iceStart,0,Math.PI*2,true); ctx.fill();
+      }
+      if (d.hzOuterR > d.innerR && d.hzInnerR < d.outerR) {
+        const hzI=Math.max(d.hzInnerR,d.innerR), hzO=Math.min(d.hzOuterR,d.outerR);
+        const grd=ctx.createRadialGradient(d.cx,d.cy,hzI,d.cx,d.cy,hzO);
+        grd.addColorStop(0,'rgba(80,200,100,0.06)'); grd.addColorStop(1,'rgba(60,180,80,0.02)');
+        ctx.fillStyle=grd;
+        ctx.beginPath(); ctx.arc(d.cx,d.cy,hzO,0,Math.PI*2);
+        ctx.arc(d.cx,d.cy,hzI,0,Math.PI*2,true); ctx.fill();
+      }
+      ctx.globalAlpha=0.18; ctx.beginPath();
+      ctx.arc(d.cx,d.cy,gasStart,0,Math.PI*2);
+      ctx.strokeStyle='rgba(180,210,255,0.6)'; ctx.lineWidth=0.5; ctx.setLineDash([3,5]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha=0.15; ctx.beginPath();
+      ctx.arc(d.cx,d.cy,d.rocheR,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,80,80,0.7)'; ctx.lineWidth=0.5; ctx.setLineDash([2,4]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha=0.20; ctx.fillStyle='#fff';
+      ctx.font='7px Space Grotesk,sans-serif'; ctx.textAlign='center';
+      const labelR = r => Math.min(r, d.outerR*0.92);
+      ctx.fillText('rocky', d.cx+labelR(d.innerR+(gasStart-d.innerR)*0.5), d.cy-4);
+      ctx.fillText('gas',   d.cx+labelR(gasStart+(iceStart-gasStart)*0.5),  d.cy-4);
+      ctx.fillText('ice',   d.cx+labelR(iceStart+(d.outerR-iceStart)*0.5),  d.cy-4);
+      ctx.globalAlpha=1; ctx.textAlign='left';
+    }
+
+    for (const star of sys.stars) {
+      const fade=star.ejectFade!==undefined?star.ejectFade:1;
+      const g=star.glow*fade, gc=star.glowCol, cc=star.coreCol;
+      const glowR=(star.radius+12)*(0.5+g*0.5)+star.mass*1.2;
+      const grd=ctx.createRadialGradient(star.x,star.y,0,star.x,star.y,glowR);
+      grd.addColorStop(0,  `rgba(255,252,240,${0.8*g})`);
+      grd.addColorStop(0.2,`rgba(${gc.join(',')},${0.6*g})`);
+      grd.addColorStop(0.7,`rgba(${gc.join(',')},${0.15*g})`);
+      grd.addColorStop(1,  'rgba(0,0,0,0)');
+      ctx.fillStyle=grd;
+      ctx.beginPath(); ctx.arc(star.x,star.y,glowR,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=0.9;
+      ctx.beginPath(); ctx.arc(star.x,star.y,star.radius*(0.4+g*0.6),0,Math.PI*2);
+      ctx.fillStyle=`rgb(${cc.join(',')})`; ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    if (sys.stars.length>1 && sys.stars[0].baryR>0) {
+      ctx.globalAlpha=0.08;
+      ctx.beginPath(); ctx.arc(sys.cx,sys.cy,sys.stars[0].baryR,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=0.5; ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+
+    for (const pl of sys.planets) {
+      if (pl.opacity <= 0.01) continue;
+      ctx.globalAlpha = 0.07 * pl.opacity;
+      ctx.beginPath(); ctx.arc(sys.disk.cx,sys.disk.cy,pl.orbitR,0,Math.PI*2);
+      if (pl.looselyBound || pl.fate==='eject') { ctx.setLineDash([4,6]); ctx.strokeStyle='rgba(255,180,80,0.5)'; }
+      else if (pl.fate==='shred') { ctx.setLineDash([2,3]); ctx.strokeStyle='rgba(255,80,80,0.5)'; }
+      else { ctx.setLineDash([]); ctx.strokeStyle='#aaa'; }
+      ctx.lineWidth=0.5; ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha = pl.opacity;
+      const grd=ctx.createRadialGradient(pl.x-pl.radius*0.35,pl.y-pl.radius*0.35,0,pl.x,pl.y,Math.max(0.1,pl.radius));
+      grd.addColorStop(0,'#ffffff28'); grd.addColorStop(1,pl.color);
+      ctx.beginPath(); ctx.arc(pl.x,pl.y,Math.max(0.1,pl.radius),0,Math.PI*2);
+      ctx.fillStyle=grd; ctx.fill();
+      if (pl.fate==='shred') {
+        ctx.globalAlpha=0.8*pl.opacity;
+        ctx.beginPath(); ctx.arc(pl.x+pl.radius,pl.y-pl.radius,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,80,80,1)'; ctx.fill();
+      } else if (pl.fate==='eject') {
+        ctx.globalAlpha=0.8*pl.opacity;
+        ctx.beginPath(); ctx.arc(pl.x+pl.radius,pl.y-pl.radius,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,160,40,1)'; ctx.fill();
+      } else if (pl.looselyBound) {
+        ctx.globalAlpha=0.6;
+        ctx.beginPath(); ctx.arc(pl.x+pl.radius,pl.y-pl.radius,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,180,80,1)'; ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha=1;
 }
 
-function loop() {
-  drawCamera();
-  tick();
-  drawParticles();
-  updateFormationLabel();
-  updateParamPanel();
+// ─── ANNOUNCEMENT ────────────────────────────────────────
+const annEl=document.getElementById('ann');
+let annTimer=null;
+function announce(sym,name,sub){
+  document.getElementById('ann-sym').textContent=sym;
+  document.getElementById('ann-name').textContent=name;
+  document.getElementById('ann-sub').textContent=sub||'';
+  annEl.classList.add('show');
+  clearTimeout(annTimer);
+  annTimer=setTimeout(()=>annEl.classList.remove('show'),3500);
+  addStamp(sym, name);
+}
+
+const stampsLayer=document.getElementById('stamps-layer');
+const stamps=[];
+function addStamp(sym, name) {
+  const x = starSystems.length ? starSystems[starSystems.length-1].cx : gest.x*simCanvas.width;
+  const y = starSystems.length ? starSystems[starSystems.length-1].cy : gest.y*simCanvas.height;
+  const el=document.createElement('div');
+  el.className='stamp'; el.style.left=x+'px'; el.style.top=y+'px';
+  el.innerHTML=`<span class="stamp-name">${name}</span>`;
+  stampsLayer.appendChild(el); stamps.push(el);
+}
+
+// ─── NARRATIVE PROMPT SYSTEM ─────────────────────────────
+const STEPS = [
+  {
+    id: 'start',
+    text: 'Bring your left hand into frame and pinch to gather particles — deeper pinch = more mass.',
+    done: () => starSystems.length >= 1,
+  },
+  {
+    id: 'star_formed',
+    text: 'That ring around your star is a protoplanetary disk — the same kind that formed our solar system. Rocky, gas and ice zones glow at different distances from the star.',
+    delay: 2500,
+    done: () => { const t=starSystems.reduce((s,sys)=>s+sys.planets.length,0); return t>=1; },
+  },
+  {
+    id: 'disk_explained',
+    text: 'Try pinching inside the glowing ring to form a planet. Where you pinch determines what kind forms.',
+    done: () => { const t=starSystems.reduce((s,sys)=>s+sys.planets.length,0); return t>=1; },
+  },
+  {
+    id: 'first_planet',
+    text: () => {
+      const sys=starSystems[0];
+      const pl=sys?.planets[sys.planets.length-1];
+      return pl ? `You've formed a ${pl.type}! What happens if you pinch in a different part of the ring?` : "You've made a planet!";
+    },
+    done: () => { const t=starSystems.reduce((s,sys)=>s+sys.planets.length,0); return t>=2; },
+    autoAdvance: 15,
+  },
+  {
+    id: 'second_planet',
+    text: () => {
+      const sys=starSystems[0];
+      const pl=sys?.planets[sys.planets.length-1];
+      return pl
+        ? `A ${pl.type}! Based on distance from the star, planets form in three states — rocky close in where it's hot, gas giants beyond the frost line, and icy worlds in the cold outer reaches.`
+        : 'Planets form differently depending on distance from the star!';
+    },
+    delay: 3000,
+    // Advance once student has made 2+ planets — don't gate on second system
+    done: () => { const t=starSystems.reduce((s,sys)=>s+sys.planets.length,0); return t>=2; },
+  },
+  {
+    id: 'zones_explained',
+    text: "Now let's make another star system, click reset, move your left hand to an empty space and pinch while shaking your right hand at the same time. Let's see what happens!",
+    done: () => starSystems.length >= 2 || pendingCaptures.length > 0 || pendingTriples.length > 0,
+    autoAdvance: 20,
+  },
+  {
+    id: 'multi_star',
+    text: () => {
+      const newest=starSystems[starSystems.length-1];
+      const count=newest?.stars.length||1;
+      const intro = count>=2
+        ? `You've made a ${count===2?'binary':'multiple'} star system! Turbulence causes fragmentation in the collapsing molecular cloud — each dense clump collapses independently into its own star.`
+        : "You've made a new star system! Turbulence fragments the collapsing cloud into multiple stars.";
+      return intro + " You're ready to form your own worlds — try recreating our solar system or building an entirely new one!";
+    },
+    done: () => true,
+  },
+];
+
+let promptStep=0, promptLocked=false, freeplay=false, promptTimer=0;
+
+function getPromptText(step){ const t=step.text; return typeof t==='function'?t():t; }
+
+function advancePrompt(){
+  if(freeplay||promptLocked) return;
+  const step=STEPS[promptStep];
+  if(!step) return;
+
+  // Time-based fallthrough: if student seems stuck on a step for >12s, nudge forward
+  promptTimer += 1/60; // approximate, called every frame
+  const autoAdvance = step.autoAdvance && promptTimer > step.autoAdvance;
+
+  if(!step.done() && !autoAdvance) return;
+  promptTimer = 0;
+  promptStep++;
+  if(promptStep>=STEPS.length){
+    document.getElementById('btn-explore').style.display='block';
+    return;
+  }
+  const next=STEPS[promptStep];
+  if(next.delay){ promptLocked=true; setTimeout(()=>{ promptLocked=false; promptTimer=0; },next.delay); }
+}
+
+function enterFreeplay(){
+  freeplay=true;
+  document.getElementById('btn-explore').style.display='none';
+  
+  document.getElementById('sim-prompt').style.display='none';
+  document.getElementById('guide-left').style.display='none';
+  document.getElementById('guide-right').style.display='none';
+}
+
+function updatePhaseLabel(){}
+
+function updateUI(){
+  const cv=document.getElementById('clock-val'),cu=document.getElementById('clock-unit');
+  if(clockOn){
+    if(cosmicMyr>=1000){cv.textContent=(cosmicMyr/1000).toFixed(2);cu.textContent='Billion Years';}
+    else{cv.textContent=cosmicMyr.toFixed(1);cu.textContent='Million Years';}
+  }
+  const pct=v=>`${(v*100).toFixed(0)}%`;
+  const mass=palmToMass();
+  document.getElementById('val-pinch').textContent=pct(gest.pinch);
+  document.getElementById('bar-pinch').style.width=pct(gest.pinch);
+  document.getElementById('val-turb').textContent=pct(gest.shake)+(gest.shake>0.15?`  (${turbToCount(gest.shake)} stars)`:'');
+  document.getElementById('bar-turb').style.width=pct(gest.shake);
+  document.getElementById('val-mass').textContent=gest.active?`${mass.toFixed(2)} M☉`:'—';
+  document.getElementById('bar-mass').style.width=`${(gest.pinch)*100}%`;
+  const totalPlanets=starSystems.reduce((s,sys)=>s+sys.planets.length,0);
+  document.getElementById('val-systems').textContent=`${starSystems.length} · ${totalPlanets}`;
+  const freeCount=particles.filter(p=>p.free&&!p.consumed).length;
+  document.getElementById('val-free').textContent=freeCount;
+
+  if(!freeplay){
+    const prevStep = promptStep;
+    advancePrompt();
+    if(promptStep !== prevStep) promptTimer = 0;
+    const step=STEPS[Math.min(promptStep,STEPS.length-1)];
+    const el=document.getElementById('sim-prompt');
+    if(el&&step) el.textContent=getPromptText(step);
+    // Show explore button from the last step onwards
+    if(promptStep >= STEPS.length-1){
+      document.getElementById('btn-explore').style.display='block';
+    }
+  }
+}
+
+// ─── GESTURE RECOGNITION ─────────────────────────────────
+function measurePinch(lm){
+  const t=lm[4],idx=lm[8];
+  const pd=Math.hypot(t.x-idx.x,t.y-idx.y);
+  return Math.max(0,Math.min(1,1-(pd-0.03)/0.19));
+}
+function measureHandSize(lm){
+  return Math.hypot((lm[9].x-lm[0].x)*handOverlay.width,(lm[9].y-lm[0].y)*handOverlay.height);
+}
+function isOpenPalm(lm){
+  const t=lm[4],idx=lm[8];
+  const pd=Math.hypot(t.x-idx.x,t.y-idx.y);
+  const tips=[lm[8],lm[12],lm[16],lm[20]];
+  let maxD=0;
+  for(let i=0;i<tips.length;i++)for(let j=i+1;j<tips.length;j++)
+    maxD=Math.max(maxD,Math.hypot(tips[i].x-tips[j].x,tips[i].y-tips[j].y));
+  return pd>0.14 && maxD>0.14;
+}
+
+const shakeH={buf:[]};
+function measureShake(lm){
+  shakeH.buf.push(lm[0].x);
+  if(shakeH.buf.length>14) shakeH.buf.shift();
+  if(shakeH.buf.length<6) return 0;
+  let rev=0,lastDir=0;
+  for(let i=1;i<shakeH.buf.length;i++){
+    const dx=shakeH.buf[i]-shakeH.buf[i-1];
+    const dir=dx>0.004?1:dx<-0.004?-1:0;
+    if(dir!==0&&lastDir!==0&&dir!==lastDir)rev++;
+    if(dir!==0)lastDir=dir;
+  }
+  return Math.max(0,Math.min(1,(rev-1)/4));
+}
+
+function smooth(a,b,k){return a+(b-a)*k;}
+
+// ─── MEDIAPIPE ───────────────────────────────────────────
+const CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function drawSkeleton(lm){
+  const W=handOverlay.width,H=handOverlay.height;
+  const pts=lm.map(p=>({x:(1-p.x)*W,y:p.y*H}));
+  handCtx.strokeStyle='rgba(232,25,125,0.4)';handCtx.lineWidth=1.5;
+  for(const[a,b]of CONN){handCtx.beginPath();handCtx.moveTo(pts[a].x,pts[a].y);handCtx.lineTo(pts[b].x,pts[b].y);handCtx.stroke();}
+  for(const pt of pts){
+    handCtx.beginPath();handCtx.arc(pt.x,pt.y,3.5,0,Math.PI*2);
+    handCtx.fillStyle='rgba(255,255,255,0.75)';handCtx.strokeStyle='rgba(232,25,125,0.7)';
+    handCtx.lineWidth=1.2;handCtx.fill();handCtx.stroke();
+  }
+}
+let noHandF=0;
+const hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`});
+hands.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:0.65,minTrackingConfidence:0.55});
+hands.onResults(results=>{
+  handCtx.clearRect(0,0,handOverlay.width,handOverlay.height);
+  const lms=results.multiHandLandmarks||[];
+  const hdns=results.multiHandedness||[];
+  lms.forEach(lm=>drawSkeleton(lm));
+
+  let leftLM=null, rightLM=null;
+  for(let i=0;i<hdns.length;i++){
+    if(hdns[i].label==='Right') leftLM =lms[i];
+    if(hdns[i].label==='Left')  rightLM=lms[i];
+  }
+
+  if(leftLM){
+    noHandF=0; gest.active=true;
+    gest.isOpen  =isOpenPalm(leftLM);
+    gest.pinch   =smooth(gest.pinch,   measurePinch(leftLM),    0.20);
+    gest.handSize=smooth(gest.handSize,measureHandSize(leftLM), 0.14);
+    gest.x=smooth(gest.x, 1-leftLM[8].x, 0.18);
+    gest.y=smooth(gest.y, leftLM[8].y,   0.18);
+  } else {
+    // Left hand gone — decay pinch but keep position for a few frames
+    gest.active=false; gest.isOpen=false;
+    gest.pinch=smooth(gest.pinch,0,0.08);
+  }
+
+  // Right hand: shake only — completely independent of left hand state
+  if(rightLM){
+    gest.shake=smooth(gest.shake,measureShake(rightLM),0.22);
+  } else {
+    gest.shake=smooth(gest.shake,0,0.05);
+    shakeH.buf=[];
+  }
+
+  // Only truly inactive if neither hand present for several frames
+  if(!leftLM&&!rightLM){ noHandF++; if(noHandF>6) gest.active=false; }
+  else noHandF=0;
+});
+
+// ─── CAMERA ──────────────────────────────────────────────
+async function startCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}});
+    video.srcObject=stream;
+    await new Promise(r=>{video.onloadedmetadata=r;});
+    await video.play();
+    async function sendFrame(){
+      if(video.readyState>=2)await hands.send({image:video});
+      if(video.requestVideoFrameCallback)video.requestVideoFrameCallback(sendFrame);
+    }
+    if(video.requestVideoFrameCallback)video.requestVideoFrameCallback(sendFrame);
+    else setInterval(async()=>{if(video.readyState>=2)await hands.send({image:video});},1000/30);
+  }catch(e){console.warn('Camera unavailable:',e);}
+}
+
+// ─── MAIN LOOP ───────────────────────────────────────────
+let pinchHold=0;
+
+function loop(ts){
+  if(!lastTs)lastTs=ts;
+  const dt=Math.min((ts-lastTs)/1000,0.05);
+  lastTs=ts;
+  if(clockOn)cosmicMyr+=dt;
+
+  if(simState===SIM.IDLE){
+    if(gest.active){simState=SIM.SELECTED;}
+  }
+  else if(simState===SIM.SELECTED){
+    if(!gest.active){
+      clearSelection(); simState=SIM.IDLE; pinchHold=0;
+    } else if(gest.pinch>0.20){
+      doSelection();
+      const sel=particles.filter(p=>p.selected&&p.free&&!p.consumed);
+      if(sel.length>=5){
+        pinchHold+=dt;
+        if(pinchHold>4.0){
+          beginCollapse(selCx,selCy,palmToMass(),gest.shake,sel);
+          pinchHold=0;
+        }
+      } else pinchHold=0;
+    } else {
+      doSelection(); pinchHold=0;
+    }
+  }
+  else if(simState===SIM.COLLAPSING){
+    tickCollapse(dt);
+  }
+  else if(simState===SIM.EXPLORING){
+    if(gest.active && gest.pinch < 0.15){
+      const hx=gest.x*simCanvas.width, hy=gest.y*simCanvas.height;
+      const inExistingDisk=starSystems.some(sys=>{
+        if(!sys.disk)return false;
+        return Math.hypot(hx-sys.disk.cx,hy-sys.disk.cy)<sys.disk.outerR*1.2;
+      });
+      if(!inExistingDisk){ simState=SIM.SELECTED; }
+    }
+    tryMakePlanet(dt);
+  }
+
+  if(starSystems.length>0)tickStars(dt);
+  tickCaptures(dt);
+  tickTriples(dt);
+  physicsTick(dt);
+  draw();
+  updateUI();
   requestAnimationFrame(loop);
 }
 
-// ═══════════════════════════════════════════════════════════
-// HAND SKELETON — drawn onto #hand-overlay, mirrored to match video
-// ═══════════════════════════════════════════════════════════
-function drawSkeleton(landmarks) {
-  // Mirror X to match the flipped camera feed
-  const W = handOverlay.width, H = handOverlay.height;
-  const pts = landmarks.map(lm => ({ x: (1 - lm.x) * W, y: lm.y * H }));
-
-  // Connections: [from, to] index pairs from MediaPipe HAND_CONNECTIONS
-  const CONNECTIONS = [
-    [0,1],[1,2],[2,3],[3,4],
-    [0,5],[5,6],[6,7],[7,8],
-    [5,9],[9,10],[10,11],[11,12],
-    [9,13],[13,14],[14,15],[15,16],
-    [13,17],[17,18],[18,19],[19,20],
-    [0,17]
-  ];
-
-  handCtx.strokeStyle = 'rgba(232,25,125,0.65)';
-  handCtx.lineWidth   = 2;
-  handCtx.lineCap     = 'round';
-  for (const [a, b] of CONNECTIONS) {
-    handCtx.beginPath();
-    handCtx.moveTo(pts[a].x, pts[a].y);
-    handCtx.lineTo(pts[b].x, pts[b].y);
-    handCtx.stroke();
-  }
-
-  // Landmark dots
-  for (const pt of pts) {
-    handCtx.beginPath();
-    handCtx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
-    handCtx.fillStyle   = 'rgba(255,255,255,0.85)';
-    handCtx.strokeStyle = 'rgba(232,25,125,0.9)';
-    handCtx.lineWidth   = 1.5;
-    handCtx.fill();
-    handCtx.stroke();
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// MEDIAPIPE HANDS
-// ═══════════════════════════════════════════════════════════
-let prevRX = null, prevRY = null, rVelBuf = [];
-
-const hands = new Hands({
-  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`
-});
-hands.setOptions({ maxNumHands: 2, modelComplexity: 1,
-  minDetectionConfidence: 0.65, minTrackingConfidence: 0.55 });
-
-hands.onResults(results => {
-  // Clear skeleton overlay each frame
-  handCtx.clearRect(0, 0, handOverlay.width, handOverlay.height);
-
-  const lms  = results.multiHandLandmarks || [];
-  const hdns = results.multiHandedness    || [];
-
-  // Draw skeleton for every detected hand
-  lms.forEach(landmarks => drawSkeleton(landmarks));
-
-  // MP labels are mirrored: 'Right' in data = user's physical left
-  let leftLM = null, rightLM = null;
-  for (let i = 0; i < hdns.length; i++) {
-    if (hdns[i].label === 'Right') leftLM  = lms[i];
-    if (hdns[i].label === 'Left')  rightLM = lms[i];
-  }
-
-  if (!leftLM)  params.collapseStrength = smooth(params.collapseStrength, 0, 0.05);
-  if (!rightLM) {
-    params.angularMomentum = smooth(params.angularMomentum, 0, 0.05);
-    params.turbulence      = smooth(params.turbulence, 0, 0.05);
-    prevRX = null; prevRY = null;
-  }
-
-  if (leftLM) {
-    params.massX      = 1 - leftLM[0].x;
-    params.massY      = leftLM[0].y;
-    params.massAmount = Math.max(0.4, Math.min(1.6, 1.0 - leftLM[0].z * 2.5));
-    const t = leftLM[4], idx = leftLM[8];
-    const pd  = Math.hypot(t.x - idx.x, t.y - idx.y);
-    const tgt = Math.max(0, Math.min(1, 1 - (pd - 0.03) / 0.19));
-    params.collapseStrength = smooth(params.collapseStrength, tgt, 0.20);
-  }
-
-  if (rightLM) {
-    const wr = rightLM[0], mm = rightLM[9];
-    const angle = Math.atan2(mm.y - wr.y, mm.x - wr.x);
-    const tgtAM = Math.max(-1, Math.min(1, Math.sin(angle + Math.PI / 2) * 1.4));
-    params.angularMomentum = smooth(params.angularMomentum, tgtAM, 0.13);
-
-    const rx = rightLM[0].x, ry = rightLM[0].y;
-    if (prevRX !== null) {
-      const vel = Math.hypot(rx - prevRX, ry - prevRY);
-      rVelBuf.push(vel);
-      if (rVelBuf.length > 8) rVelBuf.shift();
-      const avg = rVelBuf.reduce((a, b) => a + b, 0) / rVelBuf.length;
-      params.turbulence = smooth(params.turbulence, Math.min(1, avg / 0.032), 0.22);
-    }
-    prevRX = rx; prevRY = ry;
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// CAMERA — direct getUserMedia, feeds MediaPipe each frame
-// ═══════════════════════════════════════════════════════════
-async function startSimCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    video.srcObject = stream;
-    await new Promise(res => { video.onloadedmetadata = res; });
-    await video.play();
-    camReady = true;
-
-    async function sendFrame() {
-      if (video.readyState >= 2) await hands.send({ image: video });
-      if (video.requestVideoFrameCallback) {
-        video.requestVideoFrameCallback(sendFrame);
-      }
-    }
-    if (video.requestVideoFrameCallback) {
-      video.requestVideoFrameCallback(sendFrame);
-    } else {
-      setInterval(async () => {
-        if (video.readyState >= 2) await hands.send({ image: video });
-      }, 1000 / 30);
-    }
-  } catch (e) {
-    console.warn('Camera unavailable:', e);
-    camReady = false;
-  }
-}
-startSimCamera();
-
-// ═══════════════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════════════
-clumpX = simCanvas.width  / 2;
-clumpY = simCanvas.height / 2;
+// ─── INIT ────────────────────────────────────────────────
 initParticles();
-loop();
+startCamera();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
